@@ -1,0 +1,101 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# ---------------------------------------------------------------------------
+# Secrets — NEVER commit. Use recordwise_backend/.env_sample as the template.
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env_sample
+!.env.example
+!.env.sample
+*.pem
+*.key
+secrets/
+
+# ---------------------------------------------------------------------------
+# Python backend (recordwise_backend/)
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.eggs/
+
+# ---------------------------------------------------------------------------
+# Runtime artifacts — recordings, transcripts, and logs
+# (RecordWise normally stores transcripts in Hive on the device and audio
+# in OS temp dirs, but ignore these defensively in case anything is dumped
+# locally during development / debugging.)
+# ---------------------------------------------------------------------------
+logs/
+*.log
+*.log.*
+
+# Recorded / uploaded audio
+recordings/
+uploads/
+*.wav
+*.mp3
+*.m4a
+*.flac
+*.ogg
+*.opus
+*.webm
+
+# Saved transcripts / summaries / Hive boxes (when exported locally)
+transcripts/
+*.hive
+*.lock
+*.transcript.json
+*.summary.json

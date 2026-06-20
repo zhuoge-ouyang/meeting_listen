@@ -1,0 +1,24 @@
+# Web Framework and Server
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+python-multipart==0.0.20
+
+# AI and API Integration
+openai==1.107.2
+# httpx is used directly by the Azure AI Speech REST client; openai pulls it in
+# transitively as well, but we pin it explicitly for clarity.
+httpx>=0.27,<0.29
+oss2==2.19.1
+
+# Configuration and Environment
+python-dotenv==1.1.1
+pydantic==2.10.6
+pydantic-settings==2.7.1
+
+# Audio Processing
+# imageio-ffmpeg ships a portable ffmpeg binary so the backend works in any
+# environment (container, serverless, fresh laptop) without a system install.
+imageio-ffmpeg==0.6.0
+
+# Chinese Traditional/Simplified conversion (pure Python, no native deps)
+opencc-python-reimplemented==0.1.7

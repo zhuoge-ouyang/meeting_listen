@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "notes": "Design-time image2 targets for the minimal meeting assistant UI. Runtime currently uses lightweight PNG placeholders so the app remains runnable without extra encoders; replace with WebP files at the same semantic paths when image2 output is available.",
+  "assets": [
+    {
+      "id": "app-bg-texture",
+      "runtime_path": "assets/textures/app_bg_texture.png",
+      "target_path": "assets/textures/app_bg_texture.webp",
+      "target_size": "1024x1024",
+      "format": "webp",
+      "opacity": "3%-6%",
+      "usage": "Global app background, repeat tiled.",
+      "image2_prompt": "Seamless very light warm paper and frosted grain texture for a professional meeting notes app, almost white, low contrast, no visible illustration, no gradient, no text, no icons."
+    },
+    {
+      "id": "audio-wave-texture",
+      "runtime_path": "assets/textures/audio_wave_texture.png",
+      "target_path": "assets/textures/audio_wave_texture.webp",
+      "target_size": "1600x900",
+      "format": "webp",
+      "opacity": "4%-8%",
+      "usage": "Recording and processing surfaces.",
+      "image2_prompt": "Extremely subtle monochrome audio waveform and spectrum line texture on warm off-white background, quiet enterprise tool aesthetic, no neon, no strong contrast, no text."
+    },
+    {
+      "id": "empty-state-texture",
+      "runtime_path": "assets/textures/empty_state_texture.png",
+      "target_path": "assets/textures/empty_state_texture.webp",
+      "target_size": "1200x800",
+      "format": "webp",
+      "opacity": "8%-12%",
+      "usage": "Empty and processing states.",
+      "image2_prompt": "Minimal abstract document and sound-wave texture for empty state, warm gray paper, sparse fine lines, calm business software tone, no character illustration, no map navigation, no text."
+    }
+  ]
+}
