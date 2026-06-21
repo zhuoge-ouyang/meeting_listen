@@ -13,14 +13,16 @@ class AppColors {
 class AppConstants {
   static const appName = 'RecordWise';
 
-  // Backend API base URL.
+  // Default backend API base URL.
   // Override at build/run time without editing source, e.g.:
   //   flutter run --dart-define=API_BASE_URL=https://api.example.com
-  //   flutter build web --dart-define=API_BASE_URL=https://api.example.com
-  // Falls back to localhost:8000 for local development.
-  static const apiBaseUrl = String.fromEnvironment(
+  //   flutter build apk --dart-define=API_BASE_URL=https://api.example.com
+  //
+  // Open-source builds should normally leave this empty and let each user
+  // configure their own backend URL from the Settings screen.
+  static const defaultApiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:8000',
+    defaultValue: '',
   );
 
   static const sampleRate = 16000;

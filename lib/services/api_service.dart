@@ -5,21 +5,42 @@ import 'package:dio/dio.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:path/path.dart' as path;
 import '../models/transcription_models.dart';
-import '../utils/constants.dart';
+import 'user_settings_service.dart';
 import 'web_audio_handler.dart';
 
 class ApiService {
+  ApiService(this._settings);
+
+  final UserSettingsService _settings;
+
   final Dio _dio = Dio(BaseOptions(
-    baseUrl: AppConstants.apiBaseUrl,
     connectTimeout: const Duration(seconds: 30),
     receiveTimeout: const Duration(seconds: 60),
   ));
 
+  String get currentBaseUrl => _settings.apiBaseUrl;
+
+  String _requireBaseUrl({String? override}) {
+    final baseUrl = override == null
+        ? _settings.apiBaseUrl
+        : UserSettingsService.normalizeApiBaseUrl(override);
+    if (baseUrl.isEmpty) {
+      throw Exception('请先在设置中配置后端服务地址。');
+    }
+    return baseUrl;
+  }
+
+  Dio _client({String? baseUrlOverride}) {
+    _dio.options.baseUrl = _requireBaseUrl(override: baseUrlOverride);
+    return _dio;
+  }
+
   // ── Connectivity test ─────────────────────────────────────────────────────
 
-  Future<Map<String, dynamic>> testConnection() async {
+  Future<Map<String, dynamic>> testConnection({String? baseUrlOverride}) async {
     try {
-      final response = await _dio.get('/api/test');
+      final response =
+          await _client(baseUrlOverride: baseUrlOverride).get('/api/test');
       return response.data as Map<String, dynamic>;
     } catch (e) {
       debugPrint('ApiService: connection test failed — $e');
@@ -34,7 +55,7 @@ class ApiService {
     List<int> segmentIds = const [],
   }) async {
     try {
-      final response = await _dio.post(
+      final response = await _client().post(
         '/api/meetings/$meetingId/translate-tts',
         data: {
           'text': text,
@@ -47,7 +68,7 @@ class ApiService {
       );
       final audioUrl = result.audioUrl.startsWith('http')
           ? result.audioUrl
-          : '${AppConstants.apiBaseUrl}${result.audioUrl}';
+          : '${_requireBaseUrl()}${result.audioUrl}';
       return TranslationTtsResult(
         translatedText: result.translatedText,
         audioUrl: audioUrl,
@@ -67,7 +88,7 @@ class ApiService {
     required String meetingId,
     required Map<String, String> speakerAliases,
   }) async {
-    await _dio.post(
+    await _client().post(
       '/api/meetings/$meetingId/speakers',
       data: {'speaker_aliases': speakerAliases},
     );
@@ -77,7 +98,7 @@ class ApiService {
     required String meetingId,
     required String meetingTitle,
   }) async {
-    await _dio.post(
+    await _client().post(
       '/api/meetings/$meetingId/title',
       data: {'meeting_title': meetingTitle},
     );
@@ -89,7 +110,7 @@ class ApiService {
     String? templateText,
   }) async {
     try {
-      final response = await _dio.post(
+      final response = await _client().post(
         '/api/meetings/${result.sessionId}/summary',
         data: {
           'meeting_title': result.meetingTitle,
@@ -208,7 +229,7 @@ class ApiService {
         'generate_summary': 'true',
       });
 
-      final response = await _dio.post(
+      final response = await _client().post(
         '/api/meetings',
         data: formData,
         options: Options(

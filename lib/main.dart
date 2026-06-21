@@ -5,6 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'services/api_service.dart';
 import 'services/audio_service.dart';
 import 'services/storage_service.dart';
+import 'services/user_settings_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/launch_screen.dart';
 import 'screens/recording_screen.dart';
@@ -31,13 +32,18 @@ void main() async {
 
   final storageService = StorageService();
   await storageService.initialize();
+  final userSettingsService = UserSettingsService();
+  await userSettingsService.initialize();
 
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AudioService()),
-        ChangeNotifierProvider(create: (_) => storageService),
-        Provider(create: (_) => ApiService()),
+        ChangeNotifierProvider.value(value: storageService),
+        ChangeNotifierProvider.value(value: userSettingsService),
+        Provider(
+            create: (context) =>
+                ApiService(context.read<UserSettingsService>())),
       ],
       child: const RecordWiseApp(),
     ),

@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RecordWise 功能报告</title>
+  <style>
+    :root {
+      --ink: #26231f;
+      --muted: #6f675d;
+      --paper: #f7f4ed;
+      --surface: #fffdf8;
+      --line: #ded8cc;
+      --green: #355c4a;
+      --green-soft: #e8f0ea;
+      --blue: #355f7d;
+      --gold: #b28236;
+      --red: #a64b3f;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+      line-height: 1.65;
+    }
+
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 36px 22px 56px;
+    }
+
+    header {
+      padding: 34px 0 26px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .eyebrow {
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0;
+      margin: 0 0 8px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(34px, 5vw, 56px);
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      max-width: 820px;
+      margin: 18px 0 0;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .pill {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface);
+      padding: 7px 12px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    section {
+      margin-top: 28px;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 24px;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 0 0 8px;
+      font-size: 17px;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 0 0 12px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .grid.three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .grid.two {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+      box-shadow: 0 8px 22px rgba(38, 35, 31, 0.05);
+    }
+
+    .panel p:last-child,
+    .panel ul:last-child {
+      margin-bottom: 0;
+    }
+
+    .metric {
+      font-size: 30px;
+      color: var(--green);
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 4px;
+    }
+
+    ul {
+      margin: 0 0 12px 20px;
+      padding: 0;
+    }
+
+    li {
+      margin: 5px 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    th,
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--green-soft);
+      color: var(--green);
+      font-weight: 800;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    code {
+      background: #efe9dd;
+      border: 1px solid #e2dacd;
+      border-radius: 5px;
+      padding: 2px 5px;
+      font-family: Consolas, "Microsoft YaHei", monospace;
+      font-size: 0.92em;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .step {
+      min-height: 112px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      position: relative;
+    }
+
+    .step strong {
+      display: block;
+      color: var(--green);
+      margin-bottom: 6px;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .status.done {
+      color: var(--green);
+      background: var(--green-soft);
+    }
+
+    .status.warn {
+      color: var(--gold);
+      background: #f8efd9;
+    }
+
+    .status.risk {
+      color: var(--red);
+      background: #f7e6e1;
+    }
+
+    .note {
+      border-left: 4px solid var(--green);
+      background: var(--surface);
+      padding: 14px 16px;
+      border-radius: 0 8px 8px 0;
+      color: var(--muted);
+    }
+
+    footer {
+      margin-top: 34px;
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 820px) {
+      .grid.three,
+      .grid.two,
+      .flow {
+        grid-template-columns: 1fr;
+      }
+
+      .page {
+        padding: 22px 14px 40px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <p class="eyebrow">RecordWise 二开版功能报告</p>
+      <h1>会议录音、转写、总结和待办的一体化 App</h1>
+      <p class="subtitle">
+        本报告基于当前仓库实现整理，覆盖 Flutter 移动端、FastAPI 后端、DashScope/Qwen/OSS AI 链路、开源分发配置方式和当前风险边界。
+      </p>
+      <div class="meta">
+        <span class="pill">生成日期：2026-06-21</span>
+        <span class="pill">前端：Flutter Android</span>
+        <span class="pill">后端：FastAPI</span>
+        <span class="pill">AI：DashScope + Qwen</span>
+      </div>
+    </header>
+
+    <section>
+      <h2>一、产品定位</h2>
+      <div class="grid three">
+        <div class="panel">
+          <div class="metric">1</div>
+          <h3>会议采集入口</h3>
+          <p>支持现场录音和上传音频，适合会议、访谈、讲座、电话、聊天和头脑风暴场景。</p>
+        </div>
+        <div class="panel">
+          <div class="metric">3</div>
+          <h3>结果页签</h3>
+          <p>会议详情按原录音文本、总结文本、待办事项三类组织，减少用户查找成本。</p>
+        </div>
+        <div class="panel">
+          <div class="metric">5</div>
+          <h3>翻译朗读语言</h3>
+          <p>首版支持英语、日语、粤语、普通话、法语的指定发言翻译和 TTS 朗读。</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>二、核心工作流</h2>
+      <div class="flow">
+        <div class="step"><strong>1. 录音/上传</strong>手机端采集音频并提交到后端。</div>
+        <div class="step"><strong>2. 音频处理</strong>后端标准化音频格式，准备上传。</div>
+        <div class="step"><strong>3. OSS URL</strong>录音上传 OSS，生成 ASR 可访问的 URL。</div>
+        <div class="step"><strong>4. AI 分析</strong>DashScope ASR 说话人分离，Qwen 生成总结和待办。</div>
+        <div class="step"><strong>5. App 展示</strong>移动端保存结果并展示三类会议文档。</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>三、功能清单</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>模块</th>
+            <th>已实现能力</th>
+            <th>用户价值</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>首页</td>
+            <td>启动导航页、首页视觉图、最近会议入口、录音入口。</td>
+            <td>降低首次使用理解成本，快速进入会议处理。</td>
+          </tr>
+          <tr>
+            <td>录音页</td>
+            <td>现场录音、上传音频、会议类型选择、主要语种选择、最长录音提示。</td>
+            <td>覆盖现场会议和已有录音两种采集方式。</td>
+          </tr>
+          <tr>
+            <td>原录音文本</td>
+            <td>按说话人和时间展示转写段落，说话人改名，头像自动匹配，指定发言翻译朗读。</td>
+            <td>方便回溯会议原话，减少人工整理时间。</td>
+          </tr>
+          <tr>
+            <td>总结文本</td>
+            <td>总结编辑、复制、模板导入、模板分析确认、按模板重新生成、原文汇总子页签。</td>
+            <td>适配公司内部固定纪要格式，保留可编辑交付物。</td>
+          </tr>
+          <tr>
+            <td>待办事项</td>
+            <td>待办列表、重点标注、完成勾选、完成后删除线。</td>
+            <td>让会议动作项可以被追踪，而不只是生成文字。</td>
+          </tr>
+          <tr>
+            <td>历史记录</td>
+            <td>本机保存、搜索、排序、删除历史会议。</td>
+            <td>支持会后查阅和复盘。</td>
+          </tr>
+          <tr>
+            <td>设置</td>
+            <td>后端服务地址输入、保存、测试连接、清除本机配置、密钥策略说明。</td>
+            <td>适合开源分发，用户使用自己的后端和自己的 API 额度。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>四、AI 能力链路</h2>
+      <div class="grid two">
+        <div class="panel">
+          <h3>转写与说话人分离</h3>
+          <ul>
+            <li>服务：阿里云 DashScope Fun-ASR / Paraformer。</li>
+            <li>能力：音频转文字、说话人分离、时间段返回。</li>
+            <li>依赖：后端上传 OSS 后提供可访问音频 URL。</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3>总结和待办</h3>
+          <ul>
+            <li>服务：Qwen 文本模型。</li>
+            <li>能力：按会议纪要格式输出总结、提取 action items。</li>
+            <li>规则：同一事项被 3 个或以上不同说话人提到才高亮为重点待办。</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3>翻译朗读</h3>
+          <ul>
+            <li>服务：Qwen-MT + Qwen-TTS。</li>
+            <li>范围：英语、日语、粤语、普通话、法语。</li>
+            <li>方式：用户在原录音文本中选择某段发言后生成翻译和音频。</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3>模板化纪要</h3>
+          <ul>
+            <li>用户粘贴模板文本。</li>
+            <li>App 分析模板结构并要求确认。</li>
+            <li>后端按模板重新生成总结文本。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>五、开源分发配置模型</h2>
+      <div class="panel">
+        <p>
+          当前改造后的推荐模式是：仓库公开代码，用户自行部署后端并配置自己的 DashScope / OSS 密钥，APK 只填写用户自己的后端服务地址。这样不会出现所有人共用开发者 API 额度的问题。
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>配置项</th>
+              <th>保存位置</th>
+              <th>原因</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>后端服务地址</td>
+              <td>手机本地 Hive 设置</td>
+              <td>每个用户的部署地址不同，需要 App 可编辑。</td>
+            </tr>
+            <tr>
+              <td>DashScope API Key</td>
+              <td>后端 `.env`</td>
+              <td>模型密钥不能进入 APK，避免泄漏和滥用。</td>
+            </tr>
+            <tr>
+              <td>阿里云 OSS AccessKey</td>
+              <td>后端 `.env`</td>
+              <td>OSS 上传属于服务端能力，不能暴露到客户端。</td>
+            </tr>
+            <tr>
+              <td>模型名称</td>
+              <td>后端 `.env`</td>
+              <td>便于后端统一升级模型，不需要重新发 APK。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2>六、当前状态和风险</h2>
+      <div class="grid three">
+        <div class="panel">
+          <span class="status done">已完成</span>
+          <ul>
+            <li>移动端后端地址配置。</li>
+            <li>运行时 API 请求读取本机设置。</li>
+            <li>总结编辑、复制、模板导入。</li>
+            <li>待办完成勾选和删除线。</li>
+            <li>翻译指定文本不再依赖本机会议缓存。</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <span class="status warn">需注意</span>
+          <ul>
+            <li>当前历史记录主要保存在手机本机。</li>
+            <li>重启后端会丢失后端内存里的会议缓存。</li>
+            <li>公网部署后端前应加访问控制。</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <span class="status risk">后续建议</span>
+          <ul>
+            <li>增加 App 端后端访问 Token 配置。</li>
+            <li>后端会议记录持久化到数据库。</li>
+            <li>增加导出 Word / PDF。</li>
+            <li>补正式 CI 构建和自动测试。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>七、验证记录</h2>
+      <div class="panel">
+        <ul>
+          <li><code>flutter test test\user_settings_service_test.dart</code>：地址归一化测试通过。</li>
+          <li><code>flutter analyze</code>：前端静态检查无问题。</li>
+          <li><code>flutter build apk --release --dart-define=API_BASE_URL=http://192.168.1.33:8000</code>：release APK 构建成功。</li>
+          <li><code>adb install -r build\app\outputs\flutter-apk\app-release.apk</code>：APK 安装成功。</li>
+          <li><code>git diff --check</code>：未发现空白错误。</li>
+          <li>密钥扫描：未发现常见 DashScope / 阿里云 / AWS Key 形态。</li>
+        </ul>
+        <p class="note">
+          构建时 Flutter 提示 Gradle、Android Gradle Plugin 和 Kotlin 版本未来会被弃用；这是工具链升级提醒，不阻塞当前 APK 构建。
+        </p>
+      </div>
+    </section>
+
+    <footer>
+      RecordWise 功能报告。建议随 GitHub README 一起发布，并配套 `docs/configuration.md` 与 `docs/user-guide.md` 使用。
+    </footer>
+  </main>
+</body>
+</html>

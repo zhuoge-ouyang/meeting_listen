@@ -13,13 +13,14 @@ import 'package:recordwise/main.dart';
 import 'package:recordwise/services/api_service.dart';
 import 'package:recordwise/services/audio_service.dart';
 import 'package:recordwise/services/storage_service.dart';
+import 'package:recordwise/services/user_settings_service.dart';
 import 'package:recordwise/models/transcription_models.dart';
 
 void main() {
   testWidgets('RecordWise app smoke test', (WidgetTester tester) async {
     // Initialize Hive for testing
     await Hive.initFlutter();
-    
+
     // Register adapters only if not already registered
     if (!Hive.isAdapterRegistered(0)) {
       Hive.registerAdapter(TranscriptionResultAdapter());
@@ -30,14 +31,20 @@ void main() {
 
     final storageService = StorageService();
     await storageService.initialize();
+    final userSettingsService = UserSettingsService();
+    await userSettingsService.initialize();
 
     // Build our app and trigger a frame.
     await tester.pumpWidget(
       MultiProvider(
         providers: [
           ChangeNotifierProvider(create: (_) => AudioService()),
-          ChangeNotifierProvider(create: (_) => storageService),
-          Provider(create: (_) => ApiService()),
+          ChangeNotifierProvider.value(value: storageService),
+          ChangeNotifierProvider.value(value: userSettingsService),
+          Provider(
+            create: (context) =>
+                ApiService(context.read<UserSettingsService>()),
+          ),
         ],
         child: const RecordWiseApp(),
       ),
