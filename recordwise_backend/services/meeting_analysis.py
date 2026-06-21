@@ -209,6 +209,23 @@ JSON 结构：
 """
 
 
+def resolve_translation_source_text(
+    *,
+    text: str | None,
+    segment_ids: list[int],
+    meeting: dict[str, Any] | None,
+) -> str:
+    source_text = (text or "").strip()
+    if source_text or not segment_ids or meeting is None:
+        return source_text
+    segments = meeting.get("transcript_segments") or []
+    return "\n".join(
+        str(segments[i]["text"])
+        for i in segment_ids
+        if 0 <= i < len(segments) and isinstance(segments[i], dict)
+    ).strip()
+
+
 def _format_mmss(ms: int) -> str:
     total = max(ms, 0) // 1000
     minutes = total // 60

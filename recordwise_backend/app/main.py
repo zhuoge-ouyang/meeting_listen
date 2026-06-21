@@ -39,6 +39,7 @@ from services.meeting_analysis import (  # noqa: E402
     TranscriptSegment,
     parse_speaker_lines,
     render_meeting_minutes,
+    resolve_translation_source_text,
     transcript_text_from_segments,
 )
 from services.qwen_service import QwenService  # noqa: E402
@@ -285,15 +286,13 @@ async def translate_tts(
     _token: Optional[str] = Depends(optional_verify_token),
 ):
     meeting = _MEETING_STORE.get(meeting_id)
-    if not meeting:
+    source_text = resolve_translation_source_text(
+        text=payload.text,
+        segment_ids=payload.segment_ids,
+        meeting=meeting,
+    )
+    if not source_text and payload.segment_ids and not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")
-    source_text = (payload.text or "").strip()
-    if not source_text and payload.segment_ids:
-        source_text = "\n".join(
-            str(meeting["transcript_segments"][i]["text"])
-            for i in payload.segment_ids
-            if 0 <= i < len(meeting["transcript_segments"])
-        ).strip()
     if not source_text:
         raise HTTPException(status_code=400, detail="No source text selected")
 

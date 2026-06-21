@@ -1,6 +1,10 @@
 import unittest
 
-from services.meeting_analysis import normalize_action_items, render_meeting_minutes
+from services.meeting_analysis import (
+    normalize_action_items,
+    render_meeting_minutes,
+    resolve_translation_source_text,
+)
 
 
 class MeetingAnalysisTests(unittest.TestCase):
@@ -41,6 +45,30 @@ class MeetingAnalysisTests(unittest.TestCase):
 
         self.assertIn("【重要】补齐仓库防雨防风物料", rendered)
         self.assertIn("负责人：仓库", rendered)
+
+    def test_translation_text_does_not_require_meeting_store(self):
+        source_text = resolve_translation_source_text(
+            text="测试翻译",
+            segment_ids=[],
+            meeting=None,
+        )
+
+        self.assertEqual(source_text, "测试翻译")
+
+    def test_translation_can_read_selected_segments_from_meeting(self):
+        source_text = resolve_translation_source_text(
+            text=None,
+            segment_ids=[0, 2],
+            meeting={
+                "transcript_segments": [
+                    {"text": "第一句"},
+                    {"text": "第二句"},
+                    {"text": "第三句"},
+                ]
+            },
+        )
+
+        self.assertEqual(source_text, "第一句\n第三句")
 
 
 if __name__ == "__main__":

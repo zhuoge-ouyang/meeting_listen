@@ -116,6 +116,7 @@ class _ResultsScreenState extends State<ResultsScreen>
                   ),
                   _SummaryTab(
                     summary: _summaryText,
+                    originalDocument: _originalDocumentText,
                     controller: _summaryController,
                     isEditing: _isEditingSummary,
                     summaryModule: _summaryModule,
@@ -125,7 +126,8 @@ class _ResultsScreenState extends State<ResultsScreen>
                     onEdit: _startEditingSummary,
                     onSave: () => _saveSummary(),
                     onCancel: _cancelEditingSummary,
-                    onCopy: _copySummaryToClipboard,
+                    onCopySummary: _copySummaryToClipboard,
+                    onCopyOriginal: _copyOriginalDocumentToClipboard,
                     onImportTemplate: _importSummaryTemplate,
                     onRegenerate: _regenerateSummary,
                     onModuleChanged: _setSummaryModule,
@@ -185,6 +187,55 @@ class _ResultsScreenState extends State<ResultsScreen>
               speakerIds: const [],
             ))
         .toList();
+  }
+
+  String get _originalDocumentText {
+    final buffer = StringBuffer();
+    _OriginalDocumentBlock? currentBlock;
+    for (final segment in _segments) {
+      final speakerName =
+          _speakerAliases[segment.speakerId] ?? segment.speakerId;
+      if (currentBlock == null || currentBlock.speakerName != speakerName) {
+        if (currentBlock != null) {
+          _writeOriginalDocumentBlock(buffer, currentBlock);
+        }
+        currentBlock = _OriginalDocumentBlock(
+          speakerName: speakerName,
+          startMs: segment.startMs,
+          endMs: segment.endMs,
+          content: StringBuffer(segment.text),
+        );
+      } else {
+        currentBlock.endMs = segment.endMs;
+        currentBlock.content.write('\n${segment.text}');
+      }
+    }
+    if (currentBlock != null) {
+      _writeOriginalDocumentBlock(buffer, currentBlock);
+    }
+    return buffer.toString().trimRight();
+  }
+
+  void _writeOriginalDocumentBlock(
+    StringBuffer buffer,
+    _OriginalDocumentBlock block,
+  ) {
+    buffer
+      ..writeln('发言人：${block.speakerName}')
+      ..writeln('发言时间：${_formatTimeRange(block.startMs, block.endMs)}')
+      ..writeln('发言内容：${block.content}')
+      ..writeln();
+  }
+
+  String _formatTimeRange(int startMs, int endMs) {
+    String format(int ms) {
+      final total = (ms / 1000).floor();
+      final minutes = (total ~/ 60).toString().padLeft(2, '0');
+      final seconds = (total % 60).toString().padLeft(2, '0');
+      return '$minutes:$seconds';
+    }
+
+    return '${format(startMs)}-${format(endMs)}';
   }
 
   Future<void> _editMeetingTitle() async {
@@ -312,6 +363,13 @@ class _ResultsScreenState extends State<ResultsScreen>
     Clipboard.setData(ClipboardData(text: _summaryText));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('已复制总结文本')),
+    );
+  }
+
+  void _copyOriginalDocumentToClipboard() {
+    Clipboard.setData(ClipboardData(text: _originalDocumentText));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('已复制原文汇总')),
     );
   }
 
@@ -749,9 +807,24 @@ class _TranslationPanel extends StatelessWidget {
   }
 }
 
-class _SummaryTab extends StatelessWidget {
+class _OriginalDocumentBlock {
+  _OriginalDocumentBlock({
+    required this.speakerName,
+    required this.startMs,
+    required this.endMs,
+    required this.content,
+  });
+
+  final String speakerName;
+  final int startMs;
+  int endMs;
+  final StringBuffer content;
+}
+
+class _SummaryTab extends StatefulWidget {
   const _SummaryTab({
     required this.summary,
+    required this.originalDocument,
     required this.controller,
     required this.isEditing,
     required this.summaryModule,
@@ -761,13 +834,15 @@ class _SummaryTab extends StatelessWidget {
     required this.onEdit,
     required this.onSave,
     required this.onCancel,
-    required this.onCopy,
+    required this.onCopySummary,
+    required this.onCopyOriginal,
     required this.onImportTemplate,
     required this.onRegenerate,
     required this.onModuleChanged,
   });
 
   final String summary;
+  final String originalDocument;
   final TextEditingController controller;
   final bool isEditing;
   final String summaryModule;
@@ -777,28 +852,39 @@ class _SummaryTab extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onSave;
   final VoidCallback onCancel;
-  final VoidCallback onCopy;
+  final VoidCallback onCopySummary;
+  final VoidCallback onCopyOriginal;
   final VoidCallback onImportTemplate;
   final VoidCallback onRegenerate;
   final ValueChanged<String> onModuleChanged;
 
   @override
+  State<_SummaryTab> createState() => _SummaryTabState();
+}
+
+class _SummaryTabState extends State<_SummaryTab> {
+  String _documentTab = 'summary';
+
+  @override
   Widget build(BuildContext context) {
-    if (summary.trim().isEmpty && !isEditing) {
+    final showingSummary = _documentTab == 'summary';
+    if (widget.summary.trim().isEmpty &&
+        widget.originalDocument.trim().isEmpty &&
+        !widget.isEditing) {
       return _EmptyState(
-        message: '暂无总结文本',
+        message: '暂无文档内容',
         action: Wrap(
           spacing: 8,
           runSpacing: 8,
           alignment: WrapAlignment.center,
           children: [
             TextButton.icon(
-              onPressed: onEdit,
+              onPressed: widget.onEdit,
               icon: const Icon(Icons.edit_note),
               label: const Text('手动编辑'),
             ),
             TextButton.icon(
-              onPressed: onImportTemplate,
+              onPressed: widget.onImportTemplate,
               icon: const Icon(Icons.upload_file),
               label: const Text('导入模板'),
             ),
@@ -821,117 +907,156 @@ class _SummaryTab extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.summarize_outlined,
-                      size: 18, color: AppColors.primaryBlue),
+                  Icon(
+                    showingSummary
+                        ? Icons.summarize_outlined
+                        : Icons.notes_outlined,
+                    size: 18,
+                    color: AppColors.primaryBlue,
+                  ),
                   const SizedBox(width: 8),
-                  const Text(
-                    '总结文本',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                  Text(
+                    showingSummary ? '总结文档' : '原文汇总',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                   const Spacer(),
-                  IconButton(
-                    tooltip: '导入模板',
-                    onPressed: onImportTemplate,
-                    icon: const Icon(Icons.upload_file),
-                  ),
-                  IconButton(
-                    tooltip: '重新生成',
-                    onPressed: isRegenerating ? null : onRegenerate,
-                    icon: isRegenerating
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.refresh),
-                  ),
-                  if (isEditing) ...[
+                  if (showingSummary) ...[
                     IconButton(
-                      tooltip: '取消',
-                      onPressed: onCancel,
-                      icon: const Icon(Icons.close),
+                      tooltip: '导入模板',
+                      onPressed: widget.onImportTemplate,
+                      icon: const Icon(Icons.upload_file),
                     ),
                     IconButton(
-                      tooltip: '保存',
-                      onPressed: onSave,
-                      icon: const Icon(Icons.check),
+                      tooltip: '重新生成',
+                      onPressed:
+                          widget.isRegenerating ? null : widget.onRegenerate,
+                      icon: widget.isRegenerating
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.refresh),
                     ),
-                  ] else ...[
+                    if (widget.isEditing) ...[
+                      IconButton(
+                        tooltip: '取消',
+                        onPressed: widget.onCancel,
+                        icon: const Icon(Icons.close),
+                      ),
+                      IconButton(
+                        tooltip: '保存',
+                        onPressed: widget.onSave,
+                        icon: const Icon(Icons.check),
+                      ),
+                    ] else ...[
+                      IconButton(
+                        tooltip: '复制',
+                        onPressed: widget.onCopySummary,
+                        icon: const Icon(Icons.copy),
+                      ),
+                      IconButton(
+                        tooltip: '编辑',
+                        onPressed: widget.onEdit,
+                        icon: const Icon(Icons.edit_note),
+                      ),
+                    ],
+                  ] else
                     IconButton(
                       tooltip: '复制',
-                      onPressed: onCopy,
+                      onPressed: widget.originalDocument.trim().isEmpty
+                          ? null
+                          : widget.onCopyOriginal,
                       icon: const Icon(Icons.copy),
                     ),
-                    IconButton(
-                      tooltip: '编辑',
-                      onPressed: onEdit,
-                      icon: const Icon(Icons.edit_note),
-                    ),
-                  ],
                 ],
               ),
               const SizedBox(height: 10),
-              Wrap(
-                spacing: 12,
-                runSpacing: 10,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  SegmentedButton<String>(
-                    selected: {summaryModule},
-                    showSelectedIcon: false,
-                    segments: [
-                      const ButtonSegment(
-                        value: 'default',
-                        icon: Icon(Icons.article_outlined),
-                        label: Text('默认格式'),
-                      ),
-                      ButtonSegment(
-                        value: 'imported',
-                        icon: const Icon(Icons.description_outlined),
-                        label: const Text('导入模板'),
-                        enabled: hasImportedTemplate,
-                      ),
-                    ],
-                    onSelectionChanged: (values) {
-                      if (values.isEmpty) return;
-                      onModuleChanged(values.first);
-                    },
+              SegmentedButton<String>(
+                selected: {_documentTab},
+                showSelectedIcon: false,
+                segments: const [
+                  ButtonSegment(
+                    value: 'summary',
+                    icon: Icon(Icons.article_outlined),
+                    label: Text('总结文档'),
                   ),
-                  if (!hasImportedTemplate)
-                    const Text(
-                      '导入模板后可切换',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF7C746B)),
-                    ),
+                  ButtonSegment(
+                    value: 'original',
+                    icon: Icon(Icons.subject_outlined),
+                    label: Text('原文汇总'),
+                  ),
                 ],
+                onSelectionChanged: (values) {
+                  if (values.isEmpty) return;
+                  setState(() => _documentTab = values.first);
+                },
               ),
-              if (templateAnalysis.trim().isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF6F4EF),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFE4DED3)),
-                  ),
-                  child: Text(
-                    templateAnalysis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      height: 1.4,
-                      color: Color(0xFF5D5A54),
+              const SizedBox(height: 10),
+              if (showingSummary) ...[
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 10,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    SegmentedButton<String>(
+                      selected: {widget.summaryModule},
+                      showSelectedIcon: false,
+                      segments: [
+                        const ButtonSegment(
+                          value: 'default',
+                          icon: Icon(Icons.article_outlined),
+                          label: Text('默认格式'),
+                        ),
+                        ButtonSegment(
+                          value: 'imported',
+                          icon: const Icon(Icons.description_outlined),
+                          label: const Text('导入模板'),
+                          enabled: widget.hasImportedTemplate,
+                        ),
+                      ],
+                      onSelectionChanged: (values) {
+                        if (values.isEmpty) return;
+                        widget.onModuleChanged(values.first);
+                      },
+                    ),
+                    if (!widget.hasImportedTemplate)
+                      const Text(
+                        '导入模板后可切换',
+                        style:
+                            TextStyle(fontSize: 12, color: Color(0xFF7C746B)),
+                      ),
+                  ],
+                ),
+                if (widget.templateAnalysis.trim().isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF6F4EF),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFE4DED3)),
+                    ),
+                    child: Text(
+                      widget.templateAnalysis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        height: 1.4,
+                        color: Color(0xFF5D5A54),
+                      ),
                     ),
                   ),
-                ),
-              ],
-              if (isRegenerating) ...[
-                const SizedBox(height: 10),
-                const LinearProgressIndicator(minHeight: 2),
+                ],
+                if (widget.isRegenerating) ...[
+                  const SizedBox(height: 10),
+                  const LinearProgressIndicator(minHeight: 2),
+                ],
               ],
               const SizedBox(height: 8),
-              if (isEditing)
+              if (showingSummary && widget.isEditing)
                 TextField(
-                  controller: controller,
+                  controller: widget.controller,
                   minLines: 12,
                   maxLines: null,
                   keyboardType: TextInputType.multiline,
@@ -941,15 +1066,55 @@ class _SummaryTab extends StatelessWidget {
                   ),
                   style: const TextStyle(fontSize: 15, height: 1.6),
                 )
-              else
+              else if (showingSummary)
                 SelectableText(
-                  summary,
+                  widget.summary.trim().isEmpty ? '暂无总结文本' : widget.summary,
                   style: const TextStyle(fontSize: 15, height: 1.65),
-                ),
+                )
+              else
+                _OriginalDocumentView(document: widget.originalDocument),
             ],
           ),
         ),
       ],
+    );
+  }
+}
+
+class _OriginalDocumentView extends StatelessWidget {
+  const _OriginalDocumentView({required this.document});
+
+  final String document;
+
+  @override
+  Widget build(BuildContext context) {
+    if (document.trim().isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(
+          child: Text(
+            '暂无原文汇总',
+            style: TextStyle(color: Color(0xFF6E675F)),
+          ),
+        ),
+      );
+    }
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFCFBF8),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE4DED3)),
+      ),
+      child: SelectableText(
+        document,
+        style: const TextStyle(
+          fontSize: 14,
+          height: 1.65,
+          color: Color(0xFF2F2C29),
+        ),
+      ),
     );
   }
 }
