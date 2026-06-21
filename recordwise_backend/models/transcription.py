@@ -42,6 +42,20 @@ class SpeakerAliasRequest(BaseModel):
     speaker_aliases: Dict[str, str] = Field(default_factory=dict)
 
 
+class MeetingTitleRequest(BaseModel):
+    meeting_title: str = Field(default="", max_length=120)
+
+
+class SummaryRegenerateRequest(BaseModel):
+    meeting_title: Optional[str] = None
+    transcription: str = ""
+    transcript_segments: List[Dict[str, Any]] = Field(default_factory=list)
+    participants: List[str] = Field(default_factory=list)
+    meeting_time: Optional[str] = None
+    module: str = "default"
+    template_text: Optional[str] = None
+
+
 class TranslateTTSRequest(BaseModel):
     text: Optional[str] = None
     segment_ids: List[int] = Field(default_factory=list)

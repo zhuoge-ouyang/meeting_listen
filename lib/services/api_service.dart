@@ -56,8 +56,10 @@ class ApiService {
         status: result.status,
       );
     } on DioException catch (e) {
-      debugPrint('ApiService: translate/TTS DioException — ${e.response?.data ?? e.message}');
-      throw Exception('Translation/TTS error: ${e.response?.data ?? e.message}');
+      debugPrint(
+          'ApiService: translate/TTS DioException — ${e.response?.data ?? e.message}');
+      throw Exception(
+          'Translation/TTS error: ${e.response?.data ?? e.message}');
     }
   }
 
@@ -69,6 +71,46 @@ class ApiService {
       '/api/meetings/$meetingId/speakers',
       data: {'speaker_aliases': speakerAliases},
     );
+  }
+
+  Future<void> updateMeetingTitle({
+    required String meetingId,
+    required String meetingTitle,
+  }) async {
+    await _dio.post(
+      '/api/meetings/$meetingId/title',
+      data: {'meeting_title': meetingTitle},
+    );
+  }
+
+  Future<SummaryRegenerationResult> regenerateSummary({
+    required TranscriptionResult result,
+    required String module,
+    String? templateText,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/meetings/${result.sessionId}/summary',
+        data: {
+          'meeting_title': result.meetingTitle,
+          'transcription': result.transcription,
+          'transcript_segments': result.transcriptSegments,
+          'participants': result.participants,
+          'meeting_time': result.meetingTime,
+          'module': module,
+          'template_text': templateText,
+        },
+        options: Options(receiveTimeout: const Duration(minutes: 3)),
+      );
+      return SummaryRegenerationResult.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      debugPrint(
+          'ApiService: regenerate summary DioException — ${e.response?.data ?? e.message}');
+      throw Exception(
+          'Summary regeneration error: ${e.response?.data ?? e.message}');
+    }
   }
 
   // ── Public transcription entry-points ────────────────────────────────────
@@ -87,7 +129,7 @@ class ApiService {
         final blobData = await WebAudioHandler.fetchBlobData(file);
         if (blobData != null && blobData.isNotEmpty) {
           audioBytes = blobData;
-          fileName   = 'web_recording.wav';
+          fileName = 'web_recording.wav';
         } else {
           throw Exception(
             'Could not retrieve audio data from the browser. Please try again.',
@@ -102,14 +144,14 @@ class ApiService {
         throw Exception('Audio file not found: ${ioFile.path}');
       }
       audioBytes = await ioFile.readAsBytes();
-      fileName   = path.basename(ioFile.path);
+      fileName = path.basename(ioFile.path);
     }
 
     return _postToBackend(
-      audioBytes:           audioBytes,
-      fileName:             fileName,
-      meetingType:          meetingType,
-      language:             language,
+      audioBytes: audioBytes,
+      fileName: fileName,
+      meetingType: meetingType,
+      language: language,
     );
   }
 
@@ -120,10 +162,10 @@ class ApiService {
     String language = 'zh',
   }) async {
     return _postToBackend(
-      audioBytes:           audioData,
-      fileName:             'web_recording.wav',
-      meetingType:          meetingType,
-      language:             language,
+      audioBytes: audioData,
+      fileName: 'web_recording.wav',
+      meetingType: meetingType,
+      language: language,
     );
   }
 
@@ -136,11 +178,11 @@ class ApiService {
   }) async {
     final ext = _getFileExtension(fileName) ?? _detectAudioFormat(audioData);
     return _postToBackend(
-      audioBytes:           audioData,
-      fileName:             'uploaded_audio.$ext',
-      meetingType:          meetingType,
-      language:             language,
-      audioSubtype:         ext,
+      audioBytes: audioData,
+      fileName: 'uploaded_audio.$ext',
+      meetingType: meetingType,
+      language: language,
+      audioSubtype: ext,
     );
   }
 
@@ -149,41 +191,44 @@ class ApiService {
   /// Single POST helper shared by all three public methods.
   Future<TranscriptionResult> _postToBackend({
     required Uint8List audioBytes,
-    required String    fileName,
-    required String    meetingType,
-    required String    language,
-    String  audioSubtype = 'wav',
+    required String fileName,
+    required String meetingType,
+    required String language,
+    String audioSubtype = 'wav',
   }) async {
     try {
       final formData = FormData.fromMap({
         'audio_file': MultipartFile.fromBytes(
           audioBytes,
-          filename:    fileName,
+          filename: fileName,
           contentType: MediaType('audio', audioSubtype),
         ),
-        'meeting_type':      meetingType,
-        'language':          language,
-        'generate_summary':  'true',
+        'meeting_type': meetingType,
+        'language': language,
+        'generate_summary': 'true',
       });
 
       final response = await _dio.post(
         '/api/meetings',
         data: formData,
         options: Options(
-          headers:        {'Content-Type': 'multipart/form-data'},
+          headers: {'Content-Type': 'multipart/form-data'},
           receiveTimeout: const Duration(minutes: 10),
-          sendTimeout:    const Duration(minutes: 5),
+          sendTimeout: const Duration(minutes: 5),
         ),
       );
 
       if (response.data is Map && response.data['success'] == false) {
-        throw Exception('API error: ${response.data['error'] ?? 'Unknown error'}');
+        throw Exception(
+            'API error: ${response.data['error'] ?? 'Unknown error'}');
       }
 
-      return TranscriptionResult.fromJson(response.data as Map<String, dynamic>);
+      return TranscriptionResult.fromJson(
+          response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       debugPrint('ApiService: DioException [${e.type}] — ${e.message}');
-      debugPrint('ApiService: status=${e.response?.statusCode}, body=${e.response?.data}');
+      debugPrint(
+          'ApiService: status=${e.response?.statusCode}, body=${e.response?.data}');
       throw Exception('Network error: ${e.message}');
     } catch (e) {
       debugPrint('ApiService: transcription failed — $e');
@@ -202,11 +247,26 @@ class ApiService {
   /// Infer audio container format from magic bytes.
   String _detectAudioFormat(Uint8List data) {
     if (data.length >= 4) {
-      if (data[0] == 0x52 && data[1] == 0x49 && data[2] == 0x46 && data[3] == 0x46) return 'wav';
-      if (data[0] == 0xFF && (data[1] & 0xE0) == 0xE0)                                return 'mp3';
-      if (data[0] == 0x4F && data[1] == 0x67 && data[2] == 0x67 && data[3] == 0x53)  return 'ogg';
+      if (data[0] == 0x52 &&
+          data[1] == 0x49 &&
+          data[2] == 0x46 &&
+          data[3] == 0x46) {
+        return 'wav';
+      }
+      if (data[0] == 0xFF && (data[1] & 0xE0) == 0xE0) {
+        return 'mp3';
+      }
+      if (data[0] == 0x4F &&
+          data[1] == 0x67 &&
+          data[2] == 0x67 &&
+          data[3] == 0x53) {
+        return 'ogg';
+      }
       if (data.length >= 8 &&
-          data[4] == 0x66 && data[5] == 0x74 && data[6] == 0x79 && data[7] == 0x70) {
+          data[4] == 0x66 &&
+          data[5] == 0x74 &&
+          data[6] == 0x79 &&
+          data[7] == 0x70) {
         return 'm4a';
       }
     }

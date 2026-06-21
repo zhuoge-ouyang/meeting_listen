@@ -25,7 +25,9 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from models.transcription import (  # noqa: E402
     LanguageInfo,
+    MeetingTitleRequest,
     SpeakerAliasRequest,
+    SummaryRegenerateRequest,
     TranscriptionResponse,
     TranslateTTSRequest,
     TranslateTTSResponse,
@@ -205,6 +207,72 @@ async def update_speaker_aliases(
         raise HTTPException(status_code=404, detail="Meeting not found")
     meeting["speaker_aliases"] = payload.speaker_aliases
     return {"status": "saved", "speaker_aliases": payload.speaker_aliases}
+
+
+@app.post("/api/meetings/{meeting_id}/title")
+async def update_meeting_title(
+    meeting_id: str,
+    payload: MeetingTitleRequest,
+    _token: Optional[str] = Depends(optional_verify_token),
+):
+    meeting = _MEETING_STORE.get(meeting_id)
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+    title = payload.meeting_title.strip() or "未命名会议"
+    meeting["meeting_title"] = title
+    return {"status": "saved", "meeting_title": title}
+
+
+@app.post("/api/meetings/{meeting_id}/summary")
+async def regenerate_summary(
+    meeting_id: str,
+    payload: SummaryRegenerateRequest,
+    _token: Optional[str] = Depends(optional_verify_token),
+):
+    if not qwen_service.configured:
+        raise HTTPException(status_code=503, detail="DASHSCOPE_API_KEY is not configured")
+    segments = _segments_from_regenerate_payload(payload)
+    if not segments:
+        raise HTTPException(status_code=400, detail="No transcript content available")
+
+    module = "imported" if payload.module == "imported" else "default"
+    if module == "imported" and not (payload.template_text or "").strip():
+        raise HTTPException(status_code=400, detail="Imported template text is required")
+    participant_names = ", ".join(payload.participants) if payload.participants else None
+    try:
+        summary = await qwen_service.generate_minutes(
+            meeting_title=payload.meeting_title,
+            participant_names=participant_names,
+            segments=segments,
+            template_text=payload.template_text,
+            module=module,
+        )
+    except Exception as exc:
+        logger.exception("Qwen summary regeneration failed")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Qwen meeting summary regeneration failed: {exc}",
+        ) from exc
+
+    response = {
+        "status": "completed",
+        "summary": summary.get("summary", ""),
+        "action_items": [
+            item.get("text", str(item)) if isinstance(item, dict) else str(item)
+            for item in (summary.get("action_items") or [])
+        ],
+        "key_points": summary.get("minutes") or [],
+        "full_analysis": summary.get("raw") or summary.get("summary", ""),
+        "structured_action_items": summary.get("action_items") or [],
+        "participants": summary.get("participants") or payload.participants,
+        "meeting_time": summary.get("meeting_time") or payload.meeting_time,
+    }
+    meeting = _MEETING_STORE.get(meeting_id)
+    if meeting is not None:
+        meeting.update(response)
+        if payload.meeting_title:
+            meeting["meeting_title"] = payload.meeting_title
+    return response
 
 
 @app.post(
@@ -453,6 +521,29 @@ def _summary_from_segments(
         ),
         "raw": "",
     }
+
+
+def _segments_from_regenerate_payload(
+    payload: SummaryRegenerateRequest,
+) -> list[TranscriptSegment]:
+    segments: list[TranscriptSegment] = []
+    for index, raw in enumerate(payload.transcript_segments):
+        text = str(raw.get("text") or "").strip()
+        if not text:
+            continue
+        start_ms = raw.get("start_ms")
+        end_ms = raw.get("end_ms")
+        segments.append(
+            TranscriptSegment(
+                speaker_id=str(raw.get("speaker_id") or f"speaker_{index + 1}"),
+                start_ms=int(start_ms) if isinstance(start_ms, (int, float)) else index * 30_000,
+                end_ms=int(end_ms) if isinstance(end_ms, (int, float)) else (index + 1) * 30_000,
+                text=text,
+            )
+        )
+    if segments:
+        return segments
+    return parse_speaker_lines(payload.transcription)
 
 
 def _generate_demo_response(

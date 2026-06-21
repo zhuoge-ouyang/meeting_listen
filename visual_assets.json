@@ -31,6 +31,36 @@
       "opacity": "8%-12%",
       "usage": "Empty and processing states.",
       "image2_prompt": "Minimal abstract document and sound-wave texture for empty state, warm gray paper, sparse fine lines, calm business software tone, no character illustration, no map navigation, no text."
+    },
+    {
+      "id": "speaker-avatar-set",
+      "runtime_path": "assets/avatars/",
+      "target_path": "assets/avatars/*.png",
+      "target_size": "320x320 each",
+      "format": "png",
+      "opacity": "100%",
+      "usage": "Transcript speaker avatars, mapped by speaker id and role keywords.",
+      "image2_prompt": "4x2 sprite sheet of eight professional meeting participant avatars: young male, young female, middle-aged male, middle-aged female, elderly male, elderly female, manager, board chairman. Consistent semi-flat 3D illustration, office-appropriate, no text or logos."
+    },
+    {
+      "id": "home-hero-photo",
+      "runtime_path": "assets/home/home_hero.jpg",
+      "target_path": "assets/home/home_hero.jpg",
+      "target_size": "1600x900",
+      "format": "jpg",
+      "opacity": "100%",
+      "usage": "Home page hero background photo above the meeting list.",
+      "image2_prompt": "Photorealistic modern office meeting room table with a small audio recorder, notebook, pen, muted laptop edge and soft daylight, no people faces, no text, no logos, wide 16:9 composition."
+    },
+    {
+      "id": "launch-planet-page",
+      "runtime_path": "assets/home/launch_planet.jpg",
+      "target_path": "assets/home/launch_planet.jpg",
+      "target_size": "1080x1920",
+      "format": "jpg",
+      "opacity": "100%",
+      "usage": "Full-screen app launch page shown before the main home screen. Flutter overlays exact text '卓哥制作'.",
+      "image2_prompt": "Portrait cinematic planet-from-space launch background for a meeting recording app, quiet star field, Earth-like horizon in lower third, subtle audio waveform arc, no text, no logos, no brand references."
     }
   ]
 }

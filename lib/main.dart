@@ -6,6 +6,7 @@ import 'services/api_service.dart';
 import 'services/audio_service.dart';
 import 'services/storage_service.dart';
 import 'screens/home_screen.dart';
+import 'screens/launch_screen.dart';
 import 'screens/recording_screen.dart';
 import 'screens/results_history_screen.dart';
 import 'screens/settings_screen.dart';
@@ -75,18 +76,50 @@ class RecordWiseApp extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primaryBlue,
             foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
         ),
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
             backgroundColor: AppColors.primaryBlue,
             foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
         ),
       ),
-      home: const RecordWiseHomePage(),
+      home: const LaunchGate(),
+    );
+  }
+}
+
+class LaunchGate extends StatefulWidget {
+  const LaunchGate({super.key});
+
+  @override
+  State<LaunchGate> createState() => _LaunchGateState();
+}
+
+class _LaunchGateState extends State<LaunchGate> {
+  bool _showApp = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(milliseconds: 1800), () {
+      if (!mounted) return;
+      setState(() => _showApp = true);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 280),
+      child: _showApp
+          ? const RecordWiseHomePage(key: ValueKey('home'))
+          : const LaunchScreen(key: ValueKey('launch')),
     );
   }
 }
@@ -100,11 +133,11 @@ class RecordWiseHomePage extends StatefulWidget {
 
 class _RecordWiseHomePageState extends State<RecordWiseHomePage> {
   int _selectedIndex = 0;
-  
+
   final _screens = [
-    const HomeScreen(), 
-    const RecordingScreen(), 
-    const ResultsHistoryScreen(), 
+    const HomeScreen(),
+    const RecordingScreen(),
+    const ResultsHistoryScreen(),
     const SettingsScreen()
   ];
 

@@ -165,8 +165,21 @@ def build_summary_prompt(
     meeting_title: str | None,
     participant_names: str | None,
     segments: list[TranscriptSegment],
+    template_text: str | None = None,
+    module: str = "default",
 ) -> str:
     transcript = transcript_text_from_segments(segments)
+    template = (template_text or "").strip()
+    template_instruction = ""
+    if module == "imported" and template:
+        template_instruction = f"""
+
+用户导入的会议纪要模板如下。请先理解它的标题层级、字段顺序、编号方式、语气和待办写法，然后按这个模板风格生成完整纪要。
+不要照抄模板里的示例内容；必须用本次会议转写替换内容。无法从转写判断的信息写“未识别”。
+
+导入模板：
+{template}
+"""
     return f"""请根据以下带说话人和时间戳的会议转写，生成严格 JSON，不要输出 Markdown。
 
 要求：
@@ -181,6 +194,7 @@ JSON 结构：
   "meeting_time": "",
   "participants": [],
   "minutes": [],
+  "summary_text": "",
   "action_items": [
     {{"text": "", "owner": "", "due": "", "speaker_ids": [], "evidence": []}}
   ]
@@ -188,6 +202,8 @@ JSON 结构：
 
 会议标题：{meeting_title or "未命名会议"}
 用户提供参会人员：{participant_names or "未提供"}
+总结模块：{module}
+{template_instruction}
 会议转写：
 {transcript}
 """

@@ -86,13 +86,18 @@ class TranscriptionResultAdapter extends TypeAdapter<TranscriptionResult> {
           .toList(),
       participants: ((fields[15] as List?) ?? const []).cast<String>(),
       meetingTime: fields[16] as String?,
+      completedActionItemKeys:
+          ((fields[17] as List?) ?? const []).cast<String>(),
+      summaryTemplateText: fields[18] as String? ?? '',
+      summaryTemplateAnalysis: fields[19] as String? ?? '',
+      summaryModule: fields[20] as String? ?? 'default',
     );
   }
 
   @override
   void write(BinaryWriter writer, TranscriptionResult obj) {
     writer
-      ..writeByte(17)
+      ..writeByte(21)
       ..writeByte(0)
       ..write(obj.sessionId)
       ..writeByte(1)
@@ -126,7 +131,15 @@ class TranscriptionResultAdapter extends TypeAdapter<TranscriptionResult> {
       ..writeByte(15)
       ..write(obj.participants)
       ..writeByte(16)
-      ..write(obj.meetingTime);
+      ..write(obj.meetingTime)
+      ..writeByte(17)
+      ..write(obj.completedActionItemKeys)
+      ..writeByte(18)
+      ..write(obj.summaryTemplateText)
+      ..writeByte(19)
+      ..write(obj.summaryTemplateAnalysis)
+      ..writeByte(20)
+      ..write(obj.summaryModule);
   }
 
   @override

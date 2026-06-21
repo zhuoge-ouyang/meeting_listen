@@ -68,6 +68,8 @@ class QwenService:
         meeting_title: str | None,
         participant_names: str | None,
         segments: list[TranscriptSegment],
+        template_text: str | None = None,
+        module: str = "default",
     ) -> dict[str, Any]:
         if not self.configured:
             raise RuntimeError("DASHSCOPE_API_KEY is not configured.")
@@ -75,6 +77,8 @@ class QwenService:
             meeting_title=meeting_title,
             participant_names=participant_names,
             segments=segments,
+            template_text=template_text,
+            module=module,
         )
         loop = asyncio.get_event_loop()
         completion = await loop.run_in_executor(
@@ -94,12 +98,14 @@ class QwenService:
         raw = completion.choices[0].message.content or ""
         payload = parse_summary_payload(raw)
         action_items = normalize_action_items(payload.get("action_items") or [])
-        summary_text = render_meeting_minutes(
-            meeting_time=str(payload.get("meeting_time") or ""),
-            participants=[str(v) for v in (payload.get("participants") or [])],
-            minutes=[str(v) for v in (payload.get("minutes") or [])],
-            action_items=action_items,
-        )
+        summary_text = str(payload.get("summary_text") or "").strip()
+        if not summary_text:
+            summary_text = render_meeting_minutes(
+                meeting_time=str(payload.get("meeting_time") or ""),
+                participants=[str(v) for v in (payload.get("participants") or [])],
+                minutes=[str(v) for v in (payload.get("minutes") or [])],
+                action_items=action_items,
+            )
         return {
             "summary": summary_text,
             "minutes": [str(v) for v in (payload.get("minutes") or [])],
