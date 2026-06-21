@@ -141,6 +141,7 @@ class _ResultsScreenState extends State<ResultsScreen>
   }
 
   Future<void> _renameSpeaker(String speakerId) async {
+    final apiService = context.read<ApiService>();
     final controller = TextEditingController(
       text: _speakerAliases[speakerId] ?? speakerId,
     );
@@ -168,7 +169,7 @@ class _ResultsScreenState extends State<ResultsScreen>
     if (alias == null || alias.isEmpty) return;
     setState(() => _speakerAliases[speakerId] = alias);
     try {
-      await context.read<ApiService>().saveSpeakerAliases(
+      await apiService.saveSpeakerAliases(
             meetingId: widget.result.sessionId,
             speakerAliases: _speakerAliases,
           );

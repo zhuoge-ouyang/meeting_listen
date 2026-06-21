@@ -41,7 +41,7 @@ class QwenService:
         api_key: str | None,
         compatible_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1",
         dashscope_base_url: str = "https://dashscope.aliyuncs.com/api/v1",
-        summary_model: str = "qwen-plus",
+        summary_model: str = "qwen3.7-max",
         mt_model: str = "qwen-mt-flash",
         tts_model: str = "qwen3-tts-flash",
         audio_cache_dir: str = "storage/tts",

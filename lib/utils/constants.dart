@@ -32,12 +32,12 @@ class AppConstants {
 
   // Speech-to-text is performed by Aliyun DashScope Fun-ASR/Paraformer.
   // The summary stage uses Qwen by default and translation uses Qwen-MT/TTS.
-  static const chatEngine = 'qwen-plus';
+  static const chatEngine = 'qwen3.7-max';
 
   // Qwen text model presets used by backend deployments.
   static const chatModelPresets = [
-    ('qwen-plus', 'Qwen Plus', 'Recommended minutes model'),
-    ('qwen-max', 'Qwen Max', 'Higher quality summary'),
-    ('qwen-turbo', 'Qwen Turbo', 'Lower latency'),
+    ('qwen3.7-max', 'Qwen 3.7 Max', 'Strongest meeting summary model'),
+    ('qwen3.7-plus', 'Qwen 3.7 Plus', 'Balanced cost and quality'),
+    ('qwen3.6-flash', 'Qwen 3.6 Flash', 'Lower latency'),
   ];
 }

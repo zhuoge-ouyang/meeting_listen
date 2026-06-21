@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     DASHSCOPE_BASE_URL: str = "https://dashscope.aliyuncs.com/api/v1"
     DASHSCOPE_COMPATIBLE_BASE_URL: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
     ALIYUN_ASR_MODEL: str = "fun-asr"
-    QWEN_SUMMARY_MODEL: str = "qwen-plus"
+    QWEN_SUMMARY_MODEL: str = "qwen3.7-max"
     QWEN_MT_MODEL: str = "qwen-mt-flash"
     QWEN_TTS_MODEL: str = "qwen3-tts-flash"
 
