@@ -6,6 +6,7 @@ import 'package:http_parser/http_parser.dart';
 import 'package:path/path.dart' as path;
 import '../models/transcription_models.dart';
 import 'user_settings_service.dart';
+import 'log_service.dart';
 import 'web_audio_handler.dart';
 
 class ApiService {
@@ -55,6 +56,7 @@ class ApiService {
     List<int> segmentIds = const [],
   }) async {
     try {
+      LogService().info(LogSource.api, '翻译TTS请求: $targetLanguage');
       final response = await _client().post(
         '/api/meetings/$meetingId/translate-tts',
         data: {
@@ -79,6 +81,7 @@ class ApiService {
     } on DioException catch (e) {
       debugPrint(
           'ApiService: translate/TTS DioException — ${e.response?.data ?? e.message}');
+      LogService().error(LogSource.api, '翻译TTS失败: ${e.response?.data ?? e.message}');
       throw Exception(
           'Translation/TTS error: ${e.response?.data ?? e.message}');
     }
@@ -218,6 +221,7 @@ class ApiService {
     String audioSubtype = 'wav',
   }) async {
     try {
+      LogService().info(LogSource.api, '发送转写请求: type=$meetingType, lang=$language');
       final formData = FormData.fromMap({
         'audio_file': MultipartFile.fromBytes(
           audioBytes,
@@ -244,15 +248,19 @@ class ApiService {
             'API error: ${response.data['error'] ?? 'Unknown error'}');
       }
 
-      return TranscriptionResult.fromJson(
+      final result = TranscriptionResult.fromJson(
           response.data as Map<String, dynamic>);
+      LogService().info(LogSource.api, '转写成功: sessionId=${result.sessionId}');
+      return result;
     } on DioException catch (e) {
       debugPrint('ApiService: DioException [${e.type}] — ${e.message}');
       debugPrint(
           'ApiService: status=${e.response?.statusCode}, body=${e.response?.data}');
+      LogService().error(LogSource.api, '转写失败: ${e.message}');
       throw Exception('Network error: ${e.message}');
     } catch (e) {
       debugPrint('ApiService: transcription failed — $e');
+      LogService().error(LogSource.api, '转写失败: $e');
       rethrow;
     }
   }

@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:web/web.dart' as web;
 
 import '../utils/constants.dart';
+import '../utils/toast_utils.dart';
 
 /// Widget for uploading audio files for transcription (web implementation).
 class FileUploadWidget extends StatefulWidget {
@@ -49,14 +50,9 @@ class _FileUploadWidgetState extends State<FileUploadWidget> {
       if (file.size > maxBytes) {
         final mb = (file.size / (1024 * 1024)).toStringAsFixed(1);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                '文件过大：${mb}MB。上限是 ${AppConstants.maxUploadFileSizeMb}MB。',
-              ),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppToast.show(context,
+            '文件过大：${mb}MB。上限是 ${AppConstants.maxUploadFileSizeMb}MB。',
+            isError: true);
         }
         return;
       }
@@ -71,9 +67,7 @@ class _FileUploadWidgetState extends State<FileUploadWidget> {
         onError: (Object e) {
           debugPrint('FileUploadWidget: read error — $e');
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('读取文件失败：$e')),
-            );
+            AppToast.show(context, '读取文件失败：$e', isError: true);
           }
         },
       );

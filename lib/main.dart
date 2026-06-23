@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import 'services/api_service.dart';
 import 'services/audio_service.dart';
+import 'services/log_service.dart';
 import 'services/storage_service.dart';
 import 'services/user_settings_service.dart';
 import 'screens/home_screen.dart';
@@ -16,6 +19,11 @@ import 'models/transcription_models.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
 
   // Initialize Hive
   await Hive.initFlutter();
@@ -38,6 +46,7 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => LogService()),
         ChangeNotifierProvider(create: (_) => AudioService()),
         ChangeNotifierProvider.value(value: storageService),
         ChangeNotifierProvider.value(value: userSettingsService),
@@ -48,6 +57,8 @@ void main() async {
       child: const RecordWiseApp(),
     ),
   );
+
+  LogService().info(LogSource.system, 'RecordWise \u542f\u52a8');
 }
 
 class RecordWiseApp extends StatelessWidget {
@@ -64,35 +75,14 @@ class RecordWiseApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(
           seedColor: AppColors.primaryBlue,
           primary: AppColors.primaryBlue,
-          surface: AppColors.surface,
+          surface: AppColors.paper,
         ),
         appBarTheme: const AppBarTheme(
-          backgroundColor: AppColors.surface,
+          backgroundColor: AppColors.paper,
           foregroundColor: AppColors.textDark,
           elevation: 0,
-          centerTitle: false,
+          centerTitle: true,
           surfaceTintColor: Colors.transparent,
-          titleTextStyle: TextStyle(
-            color: AppColors.textDark,
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primaryBlue,
-            foregroundColor: Colors.white,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-        ),
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            backgroundColor: AppColors.primaryBlue,
-            foregroundColor: Colors.white,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          ),
         ),
       ),
       home: const LaunchGate(),
@@ -130,39 +120,52 @@ class _LaunchGateState extends State<LaunchGate> {
   }
 }
 
-class RecordWiseHomePage extends StatefulWidget {
+class RecordWiseHomePage extends StatelessWidget {
   const RecordWiseHomePage({super.key});
 
   @override
-  State<RecordWiseHomePage> createState() => _RecordWiseHomePageState();
-}
-
-class _RecordWiseHomePageState extends State<RecordWiseHomePage> {
-  int _selectedIndex = 0;
-
-  final _screens = [
-    const HomeScreen(),
-    const RecordingScreen(),
-    const ResultsHistoryScreen(),
-    const SettingsScreen()
-  ];
-
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: _screens[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _selectedIndex,
-        selectedItemColor: AppColors.primaryBlue,
-        onTap: (i) => setState(() => _selectedIndex = i),
+    return CupertinoTabScaffold(
+      tabBar: CupertinoTabBar(
+        activeColor: AppColors.primaryBlue,
+        inactiveColor: AppColors.textLight,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: '首页'),
-          BottomNavigationBarItem(icon: Icon(Icons.mic), label: '录音'),
-          BottomNavigationBarItem(icon: Icon(Icons.article), label: '记录'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: '设置'),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.home),
+            label: '首页',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.mic),
+            label: '录音',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.doc_text),
+            label: '记录',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.settings),
+            label: '设置',
+          ),
         ],
       ),
+      tabBuilder: (context, index) {
+        return CupertinoTabView(
+          builder: (context) {
+            switch (index) {
+              case 0:
+                return const HomeScreen();
+              case 1:
+                return const RecordingScreen();
+              case 2:
+                return const ResultsHistoryScreen();
+              case 3:
+                return const SettingsScreen();
+              default:
+                return const HomeScreen();
+            }
+          },
+        );
+      },
     );
   }
 }

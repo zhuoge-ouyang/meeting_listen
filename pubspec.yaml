@@ -48,7 +48,5 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/textures/
     - assets/avatars/
-    - assets/home/home_hero.jpg
     - assets/home/launch_planet.jpg

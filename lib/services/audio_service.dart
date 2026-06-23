@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import '../utils/constants.dart';
+import 'log_service.dart';
 import 'web_audio_handler.dart';
 
 class AudioService extends ChangeNotifier {
@@ -97,8 +98,10 @@ class AudioService extends ChangeNotifier {
       });
       notifyListeners();
       debugPrint('🎤 Recording is now active');
+      LogService().info(LogSource.user, '开始录音');
     } catch (e) {
       debugPrint('❌ Error starting recording: $e');
+      LogService().error(LogSource.error, '录音启动失败: $e');
       rethrow;
     }
   }
@@ -123,6 +126,7 @@ class AudioService extends ChangeNotifier {
         if (kIsWeb) {
           // On web, the 'path' is actually a blob URL
           debugPrint('🌐 Web recording completed with blob URL: $path');
+          LogService().info(LogSource.user, '停止录音，文件: $path');
           
           // Immediately fetch the audio data while blob URL is still valid
           debugPrint('🎯 Fetching audio data from blob URL immediately...');
@@ -152,6 +156,7 @@ class AudioService extends ChangeNotifier {
             debugPrint('📱 Mobile recording: File size: $size bytes');
             if (size > 0) {
               debugPrint('✅ Mobile recording successful');
+              LogService().info(LogSource.user, '停止录音，文件: $path');
               return path;
             } else {
               debugPrint('❌ Mobile recording: File is empty');
@@ -168,6 +173,7 @@ class AudioService extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('❌ Error stopping recording: $e');
+      LogService().error(LogSource.error, '停止录音失败: $e');
       _isRecording = false;
       _timer?.cancel();
       notifyListeners();

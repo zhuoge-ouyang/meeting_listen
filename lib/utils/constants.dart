@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  static const primaryBlue = Color(0xFF355C4A);
-  static const textDark = Color(0xFF2E2A25);
-  static const textLight = Color(0xFF716A60);
-  static const successGreen = Color(0xFF3F7A52);
-  static const errorRed = Color(0xFFB34A3F);
-  static const paper = Color(0xFFF6F4EF);
-  static const surface = Color(0xFFFCFBF8);
+  static const primaryBlue = Color(0xFF007AFF);  // iOS 系统蓝
+  static const textDark = Color(0xFF000000);      // 纯黑
+  static const textLight = Color(0xFF8E8E93);     // iOS 次要文本灰
+  static const successGreen = Color(0xFF34C759);  // iOS 系统绿
+  static const errorRed = Color(0xFFFF3B30);      // iOS 系统红
+  static const paper = Color(0xFFFFFFFF);         // 纯白背景
+  static const surface = Color(0xFFF2F2F7);       // iOS 系统灰背景
+  static const separator = Color(0xFFC6C6C8);    // iOS 分隔线
 }
 
 class AppConstants {

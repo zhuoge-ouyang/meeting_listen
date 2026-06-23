@@ -1,4 +1,5 @@
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -10,6 +11,7 @@ import '../utils/constants.dart';
 import '../utils/date_utils.dart';
 import '../utils/speaker_avatar.dart';
 import '../utils/summary_template_analyzer.dart';
+import '../utils/toast_utils.dart';
 
 class ResultsScreen extends StatefulWidget {
   const ResultsScreen({super.key, required this.result});
@@ -19,9 +21,8 @@ class ResultsScreen extends StatefulWidget {
   State<ResultsScreen> createState() => _ResultsScreenState();
 }
 
-class _ResultsScreenState extends State<ResultsScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
+class _ResultsScreenState extends State<ResultsScreen> {
+  int _selectedTab = 0;
   late final TextEditingController _summaryController;
   final AudioPlayer _audioPlayer = AudioPlayer();
   final Map<String, String> _speakerAliases = {};
@@ -39,7 +40,6 @@ class _ResultsScreenState extends State<ResultsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
     _meetingTitle = widget.result.meetingTitle;
     _summaryText = widget.result.summary;
     _summaryTemplateText = widget.result.summaryTemplateText;
@@ -54,7 +54,6 @@ class _ResultsScreenState extends State<ResultsScreen>
 
   @override
   void dispose() {
-    _tabController.dispose();
     _summaryController.dispose();
     _audioPlayer.dispose();
     super.dispose();
@@ -66,83 +65,106 @@ class _ResultsScreenState extends State<ResultsScreen>
     final formattedDate = RecordWiseDateUtils.formatDateTime(dateTime);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_meetingTitle.isNotEmpty ? _meetingTitle : '会议记录'),
-        actions: [
-          IconButton(
-            tooltip: '修改会议名称',
-            icon: const Icon(Icons.edit_outlined),
-            onPressed: _editMeetingTitle,
+      backgroundColor: AppColors.paper,
+      body: CupertinoPageScaffold(
+        navigationBar: CupertinoNavigationBar(
+          middle: Text(
+            _meetingTitle.isNotEmpty ? _meetingTitle : '会议记录',
+            style: const TextStyle(fontWeight: FontWeight.w600),
           ),
-          IconButton(
-            tooltip: 'Copy all',
-            icon: const Icon(Icons.copy_all),
-            onPressed: () => _copyAllToClipboard(context),
+          leading: CupertinoNavigationBarBackButton(
+            onPressed: () => Navigator.of(context).pop(),
           ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: '原录音文本'),
-            Tab(text: '总结文本'),
-            Tab(text: '待办事项'),
-          ],
-        ),
-      ),
-      body: DecoratedBox(
-        decoration: const BoxDecoration(
-          color: Color(0xFFF6F4EF),
-          image: DecorationImage(
-            image: AssetImage('assets/textures/app_bg_texture.png'),
-            repeat: ImageRepeat.repeat,
-            opacity: 0.05,
-          ),
-        ),
-        child: Column(
-          children: [
-            _Header(result: widget.result, formattedDate: formattedDate),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _TranscriptTab(
-                    segments: _segments,
-                    speakerAliases: _speakerAliases,
-                    onRenameSpeaker: _renameSpeaker,
-                    onTranslate: _translateText,
-                    translation: _translation,
-                    isTranslating: _isTranslating,
-                    onPlayTranslation: _playTranslation,
-                  ),
-                  _SummaryTab(
-                    summary: _summaryText,
-                    originalDocument: _originalDocumentText,
-                    controller: _summaryController,
-                    isEditing: _isEditingSummary,
-                    summaryModule: _summaryModule,
-                    hasImportedTemplate: _summaryTemplateText.trim().isNotEmpty,
-                    templateAnalysis: _summaryTemplateAnalysis,
-                    isRegenerating: _isRegeneratingSummary,
-                    onEdit: _startEditingSummary,
-                    onSave: () => _saveSummary(),
-                    onCancel: _cancelEditingSummary,
-                    onCopySummary: _copySummaryToClipboard,
-                    onCopyOriginal: _copyOriginalDocumentToClipboard,
-                    onImportTemplate: _importSummaryTemplate,
-                    onRegenerate: _regenerateSummary,
-                    onModuleChanged: _setSummaryModule,
-                  ),
-                  _TasksTab(
-                    items: _actionItems,
-                    completedKeys: _completedActionItemKeys,
-                    itemKeyFor: _actionItemKey,
-                    onToggle: (item, index, done) =>
-                        _toggleActionItem(item, index, done),
-                  ),
-                ],
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                onPressed: _editMeetingTitle,
+                child: const Icon(CupertinoIcons.pencil, size: 22),
               ),
-            ),
-          ],
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                onPressed: () => _copyAllToClipboard(context),
+                child: const Icon(CupertinoIcons.doc_on_doc, size: 20),
+              ),
+            ],
+          ),
+        ),
+        backgroundColor: AppColors.paper,
+        child: SafeArea(
+          child: Column(
+            children: [
+              _Header(result: widget.result, formattedDate: formattedDate),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: CupertinoSlidingSegmentedControl<int>(
+                    groupValue: _selectedTab,
+                    onValueChanged: (value) {
+                      if (value != null) setState(() => _selectedTab = value);
+                    },
+                    children: const {
+                      0: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text('原文'),
+                      ),
+                      1: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text('总结'),
+                      ),
+                      2: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text('待办'),
+                      ),
+                    },
+                  ),
+                ),
+              ),
+              Expanded(
+                child: IndexedStack(
+                  index: _selectedTab,
+                  children: [
+                    _TranscriptTab(
+                      segments: _segments,
+                      speakerAliases: _speakerAliases,
+                      onRenameSpeaker: _renameSpeaker,
+                      onTranslate: _translateText,
+                      translation: _translation,
+                      isTranslating: _isTranslating,
+                      onPlayTranslation: _playTranslation,
+                    ),
+                    _SummaryTab(
+                      summary: _summaryText,
+                      originalDocument: _originalDocumentText,
+                      controller: _summaryController,
+                      isEditing: _isEditingSummary,
+                      summaryModule: _summaryModule,
+                      hasImportedTemplate: _summaryTemplateText.trim().isNotEmpty,
+                      templateAnalysis: _summaryTemplateAnalysis,
+                      isRegenerating: _isRegeneratingSummary,
+                      onEdit: _startEditingSummary,
+                      onSave: () => _saveSummary(),
+                      onCancel: _cancelEditingSummary,
+                      onCopySummary: _copySummaryToClipboard,
+                      onCopyOriginal: _copyOriginalDocumentToClipboard,
+                      onImportTemplate: _importSummaryTemplate,
+                      onRegenerate: _regenerateSummary,
+                      onModuleChanged: _setSummaryModule,
+                    ),
+                    _TasksTab(
+                      items: _actionItems,
+                      completedKeys: _completedActionItemKeys,
+                      itemKeyFor: _actionItemKey,
+                      onToggle: (item, index, done) =>
+                          _toggleActionItem(item, index, done),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -242,25 +264,26 @@ class _ResultsScreenState extends State<ResultsScreen>
     final storage = context.read<StorageService>();
     final apiService = context.read<ApiService>();
     final controller = TextEditingController(text: _meetingTitle);
-    final nextTitle = await showDialog<String>(
+    final nextTitle = await showCupertinoDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => CupertinoAlertDialog(
         title: const Text('修改会议名称'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLength: 120,
-          decoration: const InputDecoration(
-            labelText: '会议名称',
-            border: OutlineInputBorder(),
+        content: Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: CupertinoTextField(
+            controller: controller,
+            autofocus: true,
+            maxLength: 120,
+            placeholder: '会议名称',
           ),
         ),
         actions: [
-          TextButton(
+          CupertinoDialogAction(
             onPressed: () => Navigator.pop(context),
             child: const Text('取消'),
           ),
-          FilledButton(
+          CupertinoDialogAction(
+            isDefaultAction: true,
             onPressed: () => Navigator.pop(context, controller.text.trim()),
             child: const Text('保存'),
           ),
@@ -282,15 +305,11 @@ class _ResultsScreenState extends State<ResultsScreen>
       );
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('会议名称已本地保存，后端同步失败')),
-      );
+      _showToast('会议名称已本地保存，后端同步失败');
       return;
     }
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('会议名称已保存')),
-    );
+    _showToast('会议名称已保存');
   }
 
   Future<void> _renameSpeaker(String speakerId) async {
@@ -298,21 +317,25 @@ class _ResultsScreenState extends State<ResultsScreen>
     final controller = TextEditingController(
       text: _speakerAliases[speakerId] ?? speakerId,
     );
-    final alias = await showDialog<String>(
+    final alias = await showCupertinoDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => CupertinoAlertDialog(
         title: const Text('修改说话人名称'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(labelText: '显示名称'),
+        content: Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: CupertinoTextField(
+            controller: controller,
+            autofocus: true,
+            placeholder: '显示名称',
+          ),
         ),
         actions: [
-          TextButton(
+          CupertinoDialogAction(
             onPressed: () => Navigator.pop(context),
             child: const Text('取消'),
           ),
-          FilledButton(
+          CupertinoDialogAction(
+            isDefaultAction: true,
             onPressed: () => Navigator.pop(context, controller.text.trim()),
             child: const Text('保存'),
           ),
@@ -328,9 +351,7 @@ class _ResultsScreenState extends State<ResultsScreen>
       );
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('说话人名称已本地更新，后端同步失败')),
-      );
+      _showToast('说话人名称已本地更新，后端同步失败');
     }
   }
 
@@ -354,23 +375,17 @@ class _ResultsScreenState extends State<ResultsScreen>
     });
     await storage.save(widget.result);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('总结已保存')),
-    );
+    _showToast('总结已保存');
   }
 
   void _copySummaryToClipboard() {
     Clipboard.setData(ClipboardData(text: _summaryText));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('已复制总结文本')),
-    );
+    _showToast('已复制总结文本');
   }
 
   void _copyOriginalDocumentToClipboard() {
     Clipboard.setData(ClipboardData(text: _originalDocumentText));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('已复制原文汇总')),
-    );
+    _showToast('已复制原文汇总');
   }
 
   Future<void> _setSummaryModule(String module) async {
@@ -389,33 +404,32 @@ class _ResultsScreenState extends State<ResultsScreen>
   Future<void> _importSummaryTemplate() async {
     final storage = context.read<StorageService>();
     final controller = TextEditingController(text: _summaryTemplateText);
-    final templateText = await showDialog<String>(
+    final templateText = await showCupertinoDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => CupertinoAlertDialog(
         title: const Text('导入总结模板'),
-        content: SizedBox(
-          width: 520,
-          child: TextField(
-            controller: controller,
-            autofocus: true,
-            minLines: 10,
-            maxLines: 16,
-            keyboardType: TextInputType.multiline,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              hintText: '粘贴会议纪要模板文字',
+        content: Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: SizedBox(
+            height: 200,
+            child: CupertinoTextField(
+              controller: controller,
+              autofocus: true,
+              maxLines: null,
+              keyboardType: TextInputType.multiline,
+              placeholder: '粘贴会议纪要模板文字',
             ),
           ),
         ),
         actions: [
-          TextButton(
+          CupertinoDialogAction(
             onPressed: () => Navigator.pop(context),
             child: const Text('取消'),
           ),
-          FilledButton.icon(
+          CupertinoDialogAction(
+            isDefaultAction: true,
             onPressed: () => Navigator.pop(context, controller.text.trim()),
-            icon: const Icon(Icons.auto_awesome),
-            label: const Text('分析模板'),
+            child: const Text('分析模板'),
           ),
         ],
       ),
@@ -424,17 +438,21 @@ class _ResultsScreenState extends State<ResultsScreen>
     if (templateText == null || templateText.trim().isEmpty) return;
     final analysis = SummaryTemplateAnalyzer.analyze(templateText);
     if (!mounted) return;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showCupertinoDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => CupertinoAlertDialog(
         title: const Text('确认导入模板'),
-        content: _TemplateAnalysisView(analysis: analysis),
+        content: Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: _TemplateAnalysisView(analysis: analysis),
+        ),
         actions: [
-          TextButton(
+          CupertinoDialogAction(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('返回修改'),
           ),
-          FilledButton(
+          CupertinoDialogAction(
+            isDefaultAction: true,
             onPressed: () => Navigator.pop(context, true),
             child: const Text('确认导入'),
           ),
@@ -452,9 +470,7 @@ class _ResultsScreenState extends State<ResultsScreen>
     });
     await storage.save(widget.result);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('模板已导入，可切换模块后重新生成')),
-    );
+    _showToast('模板已导入，可切换模块后重新生成');
   }
 
   Future<void> _regenerateSummary() async {
@@ -490,14 +506,10 @@ class _ResultsScreenState extends State<ResultsScreen>
       });
       await storage.save(widget.result);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('总结文本已重新生成')),
-      );
+      _showToast('总结文本已重新生成');
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$error')),
-      );
+      _showToast('$error');
     } finally {
       if (mounted) setState(() => _isRegeneratingSummary = false);
     }
@@ -537,9 +549,7 @@ class _ResultsScreenState extends State<ResultsScreen>
       await _playTranslation();
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$error')),
-      );
+      _showToast('$error');
     } finally {
       if (mounted) setState(() => _isTranslating = false);
     }
@@ -576,9 +586,11 @@ class _ResultsScreenState extends State<ResultsScreen>
       buffer.writeln('[${segment.timeRange}] $speaker: ${segment.text}');
     }
     Clipboard.setData(ClipboardData(text: buffer.toString()));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('已复制完整会议记录')),
-    );
+    _showToast('已复制完整会议记录');
+  }
+
+  void _showToast(String message) {
+    AppToast.show(context, message);
   }
 }
 
@@ -591,25 +603,25 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
       decoration: const BoxDecoration(
-        color: Color(0xFFFCFBF8),
-        border: Border(bottom: BorderSide(color: Color(0xFFE5E0D7))),
+        color: AppColors.surface,
+        border: Border(bottom: BorderSide(color: AppColors.separator, width: 0.5)),
       ),
       child: Wrap(
         spacing: 18,
         runSpacing: 8,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          _Meta(icon: Icons.schedule, label: formattedDate),
+          _Meta(icon: CupertinoIcons.clock, label: formattedDate),
           _Meta(
-            icon: Icons.timer_outlined,
+            icon: CupertinoIcons.timer,
             label: '${result.durationMinutes.toStringAsFixed(1)} min',
           ),
-          _Meta(icon: Icons.language, label: result.languageDisplay),
+          _Meta(icon: CupertinoIcons.globe, label: result.languageDisplay),
           if (result.participants.isNotEmpty)
             _Meta(
-                icon: Icons.groups_2_outlined,
+                icon: CupertinoIcons.person_2,
                 label: '${result.participants.length} 人'),
         ],
       ),
@@ -627,10 +639,10 @@ class _Meta extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: const Color(0xFF6E675F)),
-        const SizedBox(width: 6),
+        Icon(icon, size: 15, color: AppColors.textLight),
+        const SizedBox(width: 5),
         Text(label,
-            style: const TextStyle(fontSize: 13, color: Color(0xFF3C3935))),
+            style: const TextStyle(fontSize: 13, color: AppColors.textLight)),
       ],
     );
   }
@@ -687,7 +699,7 @@ class _TranscriptTab extends StatelessWidget {
         if (isTranslating)
           const Padding(
             padding: EdgeInsets.all(16),
-            child: Center(child: CircularProgressIndicator()),
+            child: Center(child: CupertinoActivityIndicator()),
           ),
         if (translation != null)
           _TranslationPanel(
@@ -719,12 +731,13 @@ class _TranscriptSegmentTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE4DED3)),
+      margin: const EdgeInsets.only(bottom: 1),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: const BoxDecoration(
+        color: AppColors.paper,
+        border: Border(
+          bottom: BorderSide(color: AppColors.separator, width: 0.5),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -733,27 +746,42 @@ class _TranscriptSegmentTile extends StatelessWidget {
             children: [
               Text(
                 segment.timeRange,
-                style: const TextStyle(fontSize: 12, color: Color(0xFF7B746B)),
+                style: const TextStyle(
+                    fontSize: 12, color: AppColors.textLight),
               ),
               const SizedBox(width: 8),
-              ActionChip(
-                visualDensity: VisualDensity.compact,
-                label: Text(speakerName),
-                avatar: CircleAvatar(
-                  backgroundImage: AssetImage(avatarAsset),
-                  backgroundColor: const Color(0xFFE8E0D4),
+              GestureDetector(
+                onTap: onRenameSpeaker,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircleAvatar(
+                      radius: 12,
+                      backgroundImage: AssetImage(avatarAsset),
+                      backgroundColor: AppColors.surface,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      speakerName,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primaryBlue,
+                      ),
+                    ),
+                  ],
                 ),
-                onPressed: onRenameSpeaker,
               ),
               const Spacer(),
-              PopupMenuButton<String>(
-                tooltip: '翻译朗读',
-                icon: const Icon(Icons.record_voice_over_outlined),
-                onSelected: onTranslate,
-                itemBuilder: (context) => [
-                  for (final language in languages)
-                    PopupMenuItem(value: language.$1, child: Text(language.$2)),
-                ],
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                minimumSize: const Size(32, 32),
+                onPressed: () => _showLanguageMenu(context),
+                child: const Icon(
+                  CupertinoIcons.waveform,
+                  size: 20,
+                  color: AppColors.primaryBlue,
+                ),
               ),
             ],
           ),
@@ -763,6 +791,30 @@ class _TranscriptSegmentTile extends StatelessWidget {
             style: const TextStyle(fontSize: 15, height: 1.55),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showLanguageMenu(BuildContext context) {
+    showCupertinoModalPopup(
+      context: context,
+      builder: (ctx) => CupertinoActionSheet(
+        title: const Text('选择翻译语言'),
+        actions: [
+          for (final language in languages)
+            CupertinoActionSheetAction(
+              onPressed: () {
+                Navigator.pop(ctx);
+                onTranslate(language.$1);
+              },
+              child: Text(language.$2),
+            ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          isDestructiveAction: true,
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('取消'),
+        ),
       ),
     );
   }
@@ -779,23 +831,28 @@ class _TranslationPanel extends StatelessWidget {
       margin: const EdgeInsets.only(top: 8, bottom: 24),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFEFF6F2),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFBCD7C6)),
+        color: AppColors.successGreen.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.successGreen.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.translate, size: 18, color: Color(0xFF2C6B4F)),
+              const Icon(CupertinoIcons.textformat_alt, size: 18, color: AppColors.successGreen),
               const SizedBox(width: 8),
-              Text('译文 · ${translation.language} · ${translation.voice}'),
-              const Spacer(),
-              IconButton(
-                tooltip: '播放',
+              Expanded(
+                child: Text(
+                  '译文 · ${translation.language} · ${translation.voice}',
+                  style: const TextStyle(fontSize: 13, color: AppColors.textLight),
+                ),
+              ),
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                minimumSize: const Size(32, 32),
                 onPressed: onPlay,
-                icon: const Icon(Icons.play_arrow),
+                child: const Icon(CupertinoIcons.play_fill, size: 20, color: AppColors.primaryBlue),
               ),
             ],
           ),
@@ -873,217 +930,154 @@ class _SummaryTabState extends State<_SummaryTab> {
         !widget.isEditing) {
       return _EmptyState(
         message: '暂无文档内容',
-        action: Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          alignment: WrapAlignment.center,
+        action: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            TextButton.icon(
+            CupertinoButton(
               onPressed: widget.onEdit,
-              icon: const Icon(Icons.edit_note),
-              label: const Text('手动编辑'),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [Icon(CupertinoIcons.pencil, size: 16), SizedBox(width: 4), Text('手动编辑')],
+              ),
             ),
-            TextButton.icon(
+            CupertinoButton(
               onPressed: widget.onImportTemplate,
-              icon: const Icon(Icons.upload_file),
-              label: const Text('导入模板'),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [Icon(CupertinoIcons.arrow_up_doc, size: 16), SizedBox(width: 4), Text('导入模板')],
+              ),
             ),
           ],
         ),
       );
     }
     return ListView(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       children: [
         Container(
-          padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.95),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFFE4DED3)),
+            color: AppColors.paper,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.separator, width: 0.5),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Icon(
-                    showingSummary
-                        ? Icons.summarize_outlined
-                        : Icons.notes_outlined,
-                    size: 18,
-                    color: AppColors.primaryBlue,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    showingSummary ? '总结文档' : '原文汇总',
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  const Spacer(),
-                  if (showingSummary) ...[
-                    IconButton(
-                      tooltip: '导入模板',
-                      onPressed: widget.onImportTemplate,
-                      icon: const Icon(Icons.upload_file),
-                    ),
-                    IconButton(
-                      tooltip: '重新生成',
-                      onPressed:
-                          widget.isRegenerating ? null : widget.onRegenerate,
-                      icon: widget.isRegenerating
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.refresh),
-                    ),
-                    if (widget.isEditing) ...[
-                      IconButton(
-                        tooltip: '取消',
-                        onPressed: widget.onCancel,
-                        icon: const Icon(Icons.close),
-                      ),
-                      IconButton(
-                        tooltip: '保存',
-                        onPressed: widget.onSave,
-                        icon: const Icon(Icons.check),
-                      ),
-                    ] else ...[
-                      IconButton(
-                        tooltip: '复制',
-                        onPressed: widget.onCopySummary,
-                        icon: const Icon(Icons.copy),
-                      ),
-                      IconButton(
-                        tooltip: '编辑',
-                        onPressed: widget.onEdit,
-                        icon: const Icon(Icons.edit_note),
-                      ),
-                    ],
-                  ] else
-                    IconButton(
-                      tooltip: '复制',
-                      onPressed: widget.originalDocument.trim().isEmpty
-                          ? null
-                          : widget.onCopyOriginal,
-                      icon: const Icon(Icons.copy),
-                    ),
-                ],
-              ),
+              _buildToolbar(showingSummary),
+              const SizedBox(height: 12),
+              _buildDocumentSegment(),
+              const SizedBox(height: 12),
+              if (showingSummary) _buildModuleSegment(),
               const SizedBox(height: 10),
-              SegmentedButton<String>(
-                selected: {_documentTab},
-                showSelectedIcon: false,
-                segments: const [
-                  ButtonSegment(
-                    value: 'summary',
-                    icon: Icon(Icons.article_outlined),
-                    label: Text('总结文档'),
-                  ),
-                  ButtonSegment(
-                    value: 'original',
-                    icon: Icon(Icons.subject_outlined),
-                    label: Text('原文汇总'),
-                  ),
-                ],
-                onSelectionChanged: (values) {
-                  if (values.isEmpty) return;
-                  setState(() => _documentTab = values.first);
-                },
-              ),
-              const SizedBox(height: 10),
-              if (showingSummary) ...[
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 10,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    SegmentedButton<String>(
-                      selected: {widget.summaryModule},
-                      showSelectedIcon: false,
-                      segments: [
-                        const ButtonSegment(
-                          value: 'default',
-                          icon: Icon(Icons.article_outlined),
-                          label: Text('默认格式'),
-                        ),
-                        ButtonSegment(
-                          value: 'imported',
-                          icon: const Icon(Icons.description_outlined),
-                          label: const Text('导入模板'),
-                          enabled: widget.hasImportedTemplate,
-                        ),
-                      ],
-                      onSelectionChanged: (values) {
-                        if (values.isEmpty) return;
-                        widget.onModuleChanged(values.first);
-                      },
-                    ),
-                    if (!widget.hasImportedTemplate)
-                      const Text(
-                        '导入模板后可切换',
-                        style:
-                            TextStyle(fontSize: 12, color: Color(0xFF7C746B)),
-                      ),
-                  ],
-                ),
-                if (widget.templateAnalysis.trim().isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF6F4EF),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFE4DED3)),
-                    ),
-                    child: Text(
-                      widget.templateAnalysis,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        height: 1.4,
-                        color: Color(0xFF5D5A54),
-                      ),
-                    ),
-                  ),
-                ],
-                if (widget.isRegenerating) ...[
-                  const SizedBox(height: 10),
-                  const LinearProgressIndicator(minHeight: 2),
-                ],
-              ],
-              const SizedBox(height: 8),
-              if (showingSummary && widget.isEditing)
-                TextField(
-                  controller: widget.controller,
-                  minLines: 12,
-                  maxLines: null,
-                  keyboardType: TextInputType.multiline,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    hintText: '编辑会议总结',
-                  ),
-                  style: const TextStyle(fontSize: 15, height: 1.6),
-                )
-              else if (showingSummary)
-                SelectableText(
-                  widget.summary.trim().isEmpty ? '暂无总结文本' : widget.summary,
-                  style: const TextStyle(fontSize: 15, height: 1.65),
-                )
-              else
-                _OriginalDocumentView(document: widget.originalDocument),
+              _buildContent(showingSummary),
             ],
           ),
         ),
       ],
     );
   }
+
+  Widget _buildToolbar(bool showingSummary) {
+    return Row(
+      children: [
+        Icon(
+          showingSummary ? CupertinoIcons.doc_text : CupertinoIcons.doc_plaintext,
+          size: 18, color: AppColors.primaryBlue,
+        ),
+        const SizedBox(width: 8),
+        Text(showingSummary ? '总结文档' : '原文汇总', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+        const Spacer(),
+        if (showingSummary) ...[
+          CupertinoButton(padding: EdgeInsets.zero, minimumSize: const Size(32, 32), onPressed: widget.onImportTemplate, child: const Icon(CupertinoIcons.arrow_up_doc, size: 20)),
+          CupertinoButton(
+            padding: EdgeInsets.zero, minimumSize: const Size(32, 32),
+            onPressed: widget.isRegenerating ? null : widget.onRegenerate,
+            child: widget.isRegenerating ? const CupertinoActivityIndicator(radius: 9) : const Icon(CupertinoIcons.arrow_2_circlepath, size: 20),
+          ),
+          if (widget.isEditing) ...[
+            CupertinoButton(padding: EdgeInsets.zero, minimumSize: const Size(32, 32), onPressed: widget.onCancel, child: const Icon(CupertinoIcons.xmark, size: 18, color: AppColors.errorRed)),
+            CupertinoButton(padding: EdgeInsets.zero, minimumSize: const Size(32, 32), onPressed: widget.onSave, child: const Icon(CupertinoIcons.checkmark_alt, size: 20, color: AppColors.successGreen)),
+          ] else ...[
+            CupertinoButton(padding: EdgeInsets.zero, minimumSize: const Size(32, 32), onPressed: widget.onCopySummary, child: const Icon(CupertinoIcons.doc_on_clipboard, size: 20)),
+            CupertinoButton(padding: EdgeInsets.zero, minimumSize: const Size(32, 32), onPressed: widget.onEdit, child: const Icon(CupertinoIcons.pencil, size: 20)),
+          ],
+        ] else
+          CupertinoButton(
+            padding: EdgeInsets.zero, minimumSize: const Size(32, 32),
+            onPressed: widget.originalDocument.trim().isEmpty ? null : widget.onCopyOriginal,
+            child: const Icon(CupertinoIcons.doc_on_clipboard, size: 20),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildDocumentSegment() {
+    return SizedBox(
+      width: double.infinity,
+      child: CupertinoSlidingSegmentedControl<String>(
+        groupValue: _documentTab,
+        onValueChanged: (value) { if (value != null) setState(() => _documentTab = value); },
+        children: const {
+          'summary': Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Text('总结文档')),
+          'original': Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Text('原文汇总')),
+        },
+      ),
+    );
+  }
+
+  Widget _buildModuleSegment() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: double.infinity,
+          child: CupertinoSlidingSegmentedControl<String>(
+            groupValue: widget.summaryModule,
+            onValueChanged: (value) { if (value != null) widget.onModuleChanged(value); },
+            children: const {
+              'default': Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Text('默认格式')),
+              'imported': Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Text('导入模板')),
+            },
+          ),
+        ),
+        if (!widget.hasImportedTemplate)
+          const Padding(padding: EdgeInsets.only(top: 6), child: Text('导入模板后可切换', style: TextStyle(fontSize: 12, color: AppColors.textLight))),
+        if (widget.templateAnalysis.trim().isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity, padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(8)),
+            child: Text(widget.templateAnalysis, style: const TextStyle(fontSize: 12, height: 1.4, color: AppColors.textLight)),
+          ),
+        ],
+        if (widget.isRegenerating) ...[
+          const SizedBox(height: 10),
+          const LinearProgressIndicator(minHeight: 2),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildContent(bool showingSummary) {
+    if (showingSummary && widget.isEditing) {
+      return CupertinoTextField(
+        controller: widget.controller, minLines: 12, maxLines: null,
+        keyboardType: TextInputType.multiline, placeholder: '编辑会议总结',
+        style: const TextStyle(fontSize: 15, height: 1.6),
+      );
+    } else if (showingSummary) {
+      return SelectableText(
+        widget.summary.trim().isEmpty ? '暂无总结文本' : widget.summary,
+        style: const TextStyle(fontSize: 15, height: 1.65),
+      );
+    }
+    return _OriginalDocumentView(document: widget.originalDocument);
+  }
 }
 
 class _OriginalDocumentView extends StatelessWidget {
   const _OriginalDocumentView({required this.document});
-
   final String document;
 
   @override
@@ -1091,37 +1085,19 @@ class _OriginalDocumentView extends StatelessWidget {
     if (document.trim().isEmpty) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 24),
-        child: Center(
-          child: Text(
-            '暂无原文汇总',
-            style: TextStyle(color: Color(0xFF6E675F)),
-          ),
-        ),
+        child: Center(child: Text('暂无原文汇总', style: TextStyle(color: AppColors.textLight))),
       );
     }
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFCFBF8),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE4DED3)),
-      ),
-      child: SelectableText(
-        document,
-        style: const TextStyle(
-          fontSize: 14,
-          height: 1.65,
-          color: Color(0xFF2F2C29),
-        ),
-      ),
+      width: double.infinity, padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(8)),
+      child: SelectableText(document, style: const TextStyle(fontSize: 14, height: 1.65, color: AppColors.textDark)),
     );
   }
 }
 
 class _TemplateAnalysisView extends StatelessWidget {
   const _TemplateAnalysisView({required this.analysis});
-
   final SummaryTemplateAnalysis analysis;
 
   @override
@@ -1136,30 +1112,14 @@ class _TemplateAnalysisView extends StatelessWidget {
             _TemplateRow(label: '样式', value: analysis.styleName),
             _TemplateRow(label: '编号', value: analysis.numberingStyle),
             _TemplateRow(label: '待办', value: analysis.actionSection),
-            _TemplateRow(
-              label: '栏目',
-              value: analysis.sections.isEmpty
-                  ? '未识别'
-                  : analysis.sections.join(' / '),
-            ),
+            _TemplateRow(label: '栏目', value: analysis.sections.isEmpty ? '未识别' : analysis.sections.join(' / ')),
             const SizedBox(height: 12),
-            const Text(
-              '模板预览',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
+            const Text('模板预览', style: TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 6),
             Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF6F4EF),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFE4DED3)),
-              ),
-              child: Text(
-                analysis.preview,
-                style: const TextStyle(fontSize: 13, height: 1.45),
-              ),
+              width: double.infinity, padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(8)),
+              child: Text(analysis.preview, style: const TextStyle(fontSize: 13, height: 1.45)),
             ),
           ],
         ),
@@ -1170,7 +1130,6 @@ class _TemplateAnalysisView extends StatelessWidget {
 
 class _TemplateRow extends StatelessWidget {
   const _TemplateRow({required this.label, required this.value});
-
   final String label;
   final String value;
 
@@ -1181,16 +1140,7 @@ class _TemplateRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 48,
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: Color(0xFF6E675F),
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
+          SizedBox(width: 48, child: Text(label, style: const TextStyle(color: AppColors.textLight, fontWeight: FontWeight.w600))),
           Expanded(child: Text(value)),
         ],
       ),
@@ -1199,13 +1149,7 @@ class _TemplateRow extends StatelessWidget {
 }
 
 class _TasksTab extends StatelessWidget {
-  const _TasksTab({
-    required this.items,
-    required this.completedKeys,
-    required this.itemKeyFor,
-    required this.onToggle,
-  });
-
+  const _TasksTab({required this.items, required this.completedKeys, required this.itemKeyFor, required this.onToggle});
   final List<ActionItemView> items;
   final Set<String> completedKeys;
   final String Function(ActionItemView item, int index) itemKeyFor;
@@ -1213,81 +1157,66 @@ class _TasksTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) {
-      return const _EmptyState(message: '暂无待办事项');
-    }
+    if (items.isEmpty) return const _EmptyState(message: '暂无待办事项');
     return ListView.separated(
       padding: const EdgeInsets.all(16),
       itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.separator),
       itemBuilder: (context, index) {
         final item = items[index];
         final important = item.isImportant;
         final completed = completedKeys.contains(itemKeyFor(item, index));
         return Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: completed
-                ? const Color(0xFFF2F2EE)
-                : important
-                    ? const Color(0xFFFFF4D8)
-                    : Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: completed
-                  ? const Color(0xFFD8D4CC)
-                  : important
-                      ? const Color(0xFFE3B348)
-                      : const Color(0xFFE4DED3),
-            ),
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          color: AppColors.paper,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Checkbox(
-                    value: completed,
-                    onChanged: (value) => onToggle(item, index, value == true),
-                    visualDensity: VisualDensity.compact,
+                  GestureDetector(
+                    onTap: () => onToggle(item, index, !completed),
+                    child: Container(
+                      width: 22, height: 22,
+                      margin: const EdgeInsets.only(top: 1),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: completed ? AppColors.primaryBlue : Colors.transparent,
+                        border: Border.all(color: completed ? AppColors.primaryBlue : AppColors.separator, width: 1.5),
+                      ),
+                      child: completed ? const Icon(CupertinoIcons.checkmark, size: 14, color: AppColors.paper) : null,
+                    ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       item.text,
                       style: TextStyle(
-                        fontSize: 15,
-                        height: 1.45,
-                        fontWeight:
-                            important ? FontWeight.w700 : FontWeight.w500,
-                        color: completed ? const Color(0xFF878078) : null,
-                        decoration: completed
-                            ? TextDecoration.lineThrough
-                            : TextDecoration.none,
+                        fontSize: 15, height: 1.45,
+                        fontWeight: important ? FontWeight.w600 : FontWeight.w400,
+                        color: completed ? AppColors.textLight : AppColors.textDark,
+                        decoration: completed ? TextDecoration.lineThrough : TextDecoration.none,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 6,
-                children: [
-                  if (important)
-                    const _Badge(
-                        text: '重点待办 · 3人以上提到', color: Color(0xFF9A6A00)),
-                  if (completed)
-                    const _Badge(text: '已完成', color: Color(0xFF6E675F)),
-                  _Badge(
-                      text: '提到人数 ${item.speakerCount}',
-                      color: Color(0xFF6E675F)),
-                  if (item.owner != null && item.owner!.isNotEmpty)
-                    _Badge(text: '负责人 ${item.owner}', color: Color(0xFF356B83)),
-                  if (item.due != null && item.due!.isNotEmpty)
-                    _Badge(text: '截止 ${item.due}', color: Color(0xFF825E35)),
-                ],
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.only(left: 34),
+                child: Wrap(
+                  spacing: 8, runSpacing: 6,
+                  children: [
+                    if (important) const _Badge(text: '重点待办 · 3人以上提到', color: AppColors.errorRed),
+                    if (completed) const _Badge(text: '已完成', color: AppColors.successGreen),
+                    _Badge(text: '提到人数 ${item.speakerCount}', color: AppColors.textLight),
+                    if (item.owner != null && item.owner!.isNotEmpty)
+                      _Badge(text: '负责人${item.owner}', color: AppColors.primaryBlue),
+                    if (item.due != null && item.due!.isNotEmpty)
+                      _Badge(text: '截止 ${item.due}', color: AppColors.textLight),
+                  ],
+                ),
               ),
             ],
           ),
@@ -1305,16 +1234,9 @@ class _Badge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        text,
-        style:
-            TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(999)),
+      child: Text(text, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500)),
     );
   }
 }
@@ -1327,28 +1249,15 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Container(
-        width: 280,
+      child: Padding(
         padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/textures/empty_state_texture.png'),
-            opacity: 0.12,
-            fit: BoxFit.cover,
-          ),
-        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF6E675F)),
-            ),
-            if (action != null) ...[
-              const SizedBox(height: 12),
-              action!,
-            ],
+            const Icon(CupertinoIcons.doc_text, size: 48, color: AppColors.textLight),
+            const SizedBox(height: 12),
+            Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textLight, fontSize: 15)),
+            if (action != null) ...[const SizedBox(height: 12), action!],
           ],
         ),
       ),
