@@ -3,8 +3,24 @@ RecordWise Configuration
 """
 
 import os
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
+from pathlib import Path
 from typing import Optional
+
+_BACKEND_ROOT = Path(__file__).resolve().parents[1]
+_ENV_FILE_PATH = _BACKEND_ROOT / ".env"
+_REQUIRED_SERVICE_KEYS = (
+    "DASHSCOPE_API_KEY",
+    "ALIYUN_ACCESS_KEY_ID",
+    "ALIYUN_ACCESS_KEY_SECRET",
+    "ALIYUN_OSS_ENDPOINT",
+    "ALIYUN_OSS_BUCKET",
+)
+
+
+def get_env_file_path() -> Path:
+    return _ENV_FILE_PATH
 
 class Settings(BaseSettings):
     # App settings
@@ -41,7 +57,25 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     
-    model_config = {"env_file": ".env", "extra": "ignore"}
+    model_config = {"env_file": _ENV_FILE_PATH, "extra": "ignore"}
+
+    @field_validator(
+        "DASHSCOPE_API_KEY",
+        "ALIYUN_ACCESS_KEY_ID",
+        "ALIYUN_ACCESS_KEY_SECRET",
+        "ALIYUN_OSS_ENDPOINT",
+        "ALIYUN_OSS_BUCKET",
+        "ALIYUN_OSS_PUBLIC_BASE_URL",
+        mode="before",
+    )
+    @classmethod
+    def _empty_or_placeholder_as_none(cls, value):
+        if value is None:
+            return None
+        text = str(value).strip()
+        if not text or (text.startswith("<") and text.endswith(">")):
+            return None
+        return text
 
 _settings = None
 
@@ -50,3 +84,17 @@ def get_settings() -> Settings:
     if _settings is None:
         _settings = Settings()
     return _settings
+
+
+def get_config_status(settings: Optional[Settings] = None) -> dict:
+    current = settings or get_settings()
+    missing = [
+        key
+        for key in _REQUIRED_SERVICE_KEYS
+        if not str(getattr(current, key, "") or "").strip()
+    ]
+    return {
+        "env_file": "recordwise_backend/.env",
+        "env_file_exists": _ENV_FILE_PATH.exists(),
+        "missing_required": missing,
+    }

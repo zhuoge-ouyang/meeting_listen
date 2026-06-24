@@ -84,37 +84,21 @@ class _RecordingScreenState extends State<RecordingScreen> {
               // ── Language Selection ─────────────────────────────────────
               _buildSectionTitle('语种'),
               const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: CupertinoSlidingSegmentedControl<String>(
-                  groupValue: _selectedLanguage,
-                  onValueChanged: (value) {
-                      LogService().info(LogSource.user, '选择语种: $value');
-                      setState(() => _selectedLanguage = value!);
-                  },
-                  children: {
-                    for (final entry in _languageOptions.entries)
-                      entry.key: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 4, vertical: 6),
-                        child: Text(
-                          entry.value,
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                      ),
-                  },
-                ),
-              ),
-              const SizedBox(height: 8),
+              _buildLanguageSelector(),
+              const SizedBox(height: 10),
               Center(
                 child: Text(
                   _selectedLanguage == 'auto'
                       ? '自动识别适合不确定语种的录音。'
                       : '建议选择主要发言语种，转写和说话人分离会更稳定。',
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    height: 1.25,
                     color: AppColors.textLight,
+                    decoration: TextDecoration.none,
                   ),
+                  textAlign: TextAlign.center,
                 ),
               ),
 
@@ -164,6 +148,37 @@ class _RecordingScreenState extends State<RecordingScreen> {
     );
   }
 
+  Widget _buildLanguageSelector() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.separator.withValues(alpha: 0.45),
+          width: 0.5,
+        ),
+      ),
+      child: Row(
+        children: [
+          for (final entry in _languageOptions.entries)
+            Expanded(
+              child: _LanguageSegment(
+                label: entry.value,
+                isSelected: _selectedLanguage == entry.key,
+                onTap: () {
+                  if (_selectedLanguage == entry.key) return;
+                  LogService().info(LogSource.user, '选择语种: ${entry.key}');
+                  setState(() => _selectedLanguage = entry.key);
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   // ── Meeting type list (iOS-style) ────────────────────────────────────────
 
   Widget _buildMeetingTypeList() {
@@ -185,8 +200,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
             onTap: () => setState(() => _selectedMeetingType = value),
             behavior: HitTestBehavior.opaque,
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 border: isLast
                     ? null
@@ -265,9 +279,8 @@ class _RecordingScreenState extends State<RecordingScreen> {
                 color: audio.isNearTimeLimit
                     ? AppColors.errorRed
                     : AppColors.textLight,
-                fontWeight: audio.isNearTimeLimit
-                    ? FontWeight.w600
-                    : FontWeight.normal,
+                fontWeight:
+                    audio.isNearTimeLimit ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
             const SizedBox(height: 12),
@@ -380,11 +393,13 @@ class _RecordingScreenState extends State<RecordingScreen> {
 
       final res = audioData != null
           ? await apiService.transcribeWithAudioData(
-              audioData, _selectedMeetingType,
+              audioData,
+              _selectedMeetingType,
               language: _selectedLanguage,
             )
           : await apiService.transcribe(
-              fileToTranscribe, _selectedMeetingType,
+              fileToTranscribe,
+              _selectedMeetingType,
               language: _selectedLanguage,
             );
 
@@ -416,7 +431,9 @@ class _RecordingScreenState extends State<RecordingScreen> {
 
     try {
       final res = await apiService.transcribeUploadedFile(
-        audioData, fileName, _selectedMeetingType,
+        audioData,
+        fileName,
+        _selectedMeetingType,
         language: _selectedLanguage,
       );
       await storageService.save(res);
@@ -434,5 +451,57 @@ class _RecordingScreenState extends State<RecordingScreen> {
         AppToast.show(context, '上传处理失败：$e', isError: true);
       }
     }
+  }
+}
+
+class _LanguageSegment extends StatelessWidget {
+  const _LanguageSegment({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOutCubic,
+        height: 42,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.paper : Colors.transparent,
+          borderRadius: BorderRadius.circular(9),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: isSelected ? AppColors.primaryBlue : AppColors.textDark,
+            fontSize: 14,
+            height: 1.1,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+            decoration: TextDecoration.none,
+          ),
+        ),
+      ),
+    );
   }
 }

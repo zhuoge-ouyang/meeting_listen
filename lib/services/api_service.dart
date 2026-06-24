@@ -36,6 +36,26 @@ class ApiService {
     return _dio;
   }
 
+  static String describeDioException(DioException error) {
+    final detail = _backendErrorDetail(error.response?.data);
+    if (detail != null && detail.isNotEmpty) {
+      final statusCode = error.response?.statusCode;
+      return statusCode == null ? detail : 'HTTP $statusCode: $detail';
+    }
+    return error.message ?? error.toString();
+  }
+
+  static String? _backendErrorDetail(dynamic data) {
+    if (data is Map) {
+      final detail = data['detail'] ?? data['error'] ?? data['message'];
+      return detail?.toString().trim();
+    }
+    if (data is String) {
+      return data.trim();
+    }
+    return null;
+  }
+
   // ── Connectivity test ─────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> testConnection({String? baseUrlOverride}) async {
@@ -81,7 +101,8 @@ class ApiService {
     } on DioException catch (e) {
       debugPrint(
           'ApiService: translate/TTS DioException — ${e.response?.data ?? e.message}');
-      LogService().error(LogSource.api, '翻译TTS失败: ${e.response?.data ?? e.message}');
+      LogService()
+          .error(LogSource.api, '翻译TTS失败: ${e.response?.data ?? e.message}');
       throw Exception(
           'Translation/TTS error: ${e.response?.data ?? e.message}');
     }
@@ -221,7 +242,8 @@ class ApiService {
     String audioSubtype = 'wav',
   }) async {
     try {
-      LogService().info(LogSource.api, '发送转写请求: type=$meetingType, lang=$language');
+      LogService()
+          .info(LogSource.api, '发送转写请求: type=$meetingType, lang=$language');
       final formData = FormData.fromMap({
         'audio_file': MultipartFile.fromBytes(
           audioBytes,
@@ -248,16 +270,17 @@ class ApiService {
             'API error: ${response.data['error'] ?? 'Unknown error'}');
       }
 
-      final result = TranscriptionResult.fromJson(
-          response.data as Map<String, dynamic>);
+      final result =
+          TranscriptionResult.fromJson(response.data as Map<String, dynamic>);
       LogService().info(LogSource.api, '转写成功: sessionId=${result.sessionId}');
       return result;
     } on DioException catch (e) {
+      final message = describeDioException(e);
       debugPrint('ApiService: DioException [${e.type}] — ${e.message}');
       debugPrint(
           'ApiService: status=${e.response?.statusCode}, body=${e.response?.data}');
-      LogService().error(LogSource.api, '转写失败: ${e.message}');
-      throw Exception('Network error: ${e.message}');
+      LogService().error(LogSource.api, '转写失败: $message');
+      throw Exception(message);
     } catch (e) {
       debugPrint('ApiService: transcription failed — $e');
       LogService().error(LogSource.api, '转写失败: $e');

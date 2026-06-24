@@ -43,7 +43,7 @@ from services.meeting_analysis import (  # noqa: E402
     transcript_text_from_segments,
 )
 from services.qwen_service import QwenService  # noqa: E402
-from utils.config import get_settings  # noqa: E402
+from utils.config import get_config_status, get_settings  # noqa: E402
 
 
 logging.basicConfig(
@@ -137,6 +137,7 @@ async def health_check():
     return {
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
+        "config": get_config_status(settings),
         "services": {
             "dashscope": "configured" if qwen_service.configured else "missing_key",
             "aliyun_oss": "configured" if oss_service.configured else "missing_config",
